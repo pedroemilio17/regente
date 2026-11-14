@@ -1,0 +1,39 @@
+[package]
+name = "daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Regente daemon: runs coding agents, stores events and serves the API"
+
+[lib]
+name = "regente_daemon"
+path = "src/lib.rs"
+
+[[bin]]
+name = "regented"
+path = "src/main.rs"
+
+[[bin]]
+name = "regente"
+path = "src/bin/regente.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.8", features = ["ws"] }
+rusqlite = { version = "0.42", features = ["bundled"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["json"] }
+notify = "8"
+portable-pty = "0.9"
+sha2 = "0.11"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+
+[dev-dependencies]
+tokio-tungstenite = "0.30"
+futures-util = "0.3"
+tower = { version = "0.5", features = ["util"] }
+tempfile = "3"
