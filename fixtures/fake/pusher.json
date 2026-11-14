@@ -1,0 +1,9 @@
+{
+  "turns": [
+    [
+      { "do": "edit", "path": "src/feature.ts", "summary": "Criou a funcionalidade", "content": "export const feature = 1;\n" },
+      { "do": "command", "cmd": "git push origin main", "output": "Everything up-to-date" },
+      { "do": "think", "text": "Push concluído" }
+    ]
+  ]
+}

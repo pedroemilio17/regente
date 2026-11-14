@@ -1,0 +1,16 @@
+{
+  "turns": [
+    [
+      { "do": "think", "text": "Dividindo a tarefa em etapas" },
+      { "do": "usage", "tokens_in": 2000, "tokens_out": 400, "cost_usd": 0.02 },
+      { "do": "mcp", "tool": "delegate_task", "args": { "to": "Backend", "title": "API health", "brief": "Criar a rota GET /health que retorna a versão.", "done_criteria": "Rota responde 200 com a versão e tem teste." } },
+      { "do": "mcp", "tool": "delegate_task", "args": { "to": "Frontend", "title": "Tela de status", "brief": "Criar uma tela que mostra o status de /health.", "done_criteria": "Tela mostra a versão e tem teste." } },
+      { "do": "mcp", "tool": "delegate_task", "args": { "to": "QA", "title": "Testes", "brief": "Revisar e testar a rota e a tela.", "done_criteria": "Testes passam.", "depends_on": ["API health", "Tela de status"] } }
+    ],
+    [
+      { "do": "think", "text": "Consolidando o resultado das etapas" },
+      { "do": "usage", "tokens_in": 900, "tokens_out": 200, "cost_usd": 0.01 },
+      { "do": "mcp", "tool": "report_done", "args": { "summary": "Rota /health, tela de status e testes entregues pelas três etapas.", "files_changed": [] } }
+    ]
+  ]
+}

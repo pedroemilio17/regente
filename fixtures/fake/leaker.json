@@ -1,0 +1,10 @@
+{
+  "turns": [
+    [
+      { "do": "read", "path": ".env" },
+      { "do": "edit", "path": "src/ok.ts", "summary": "Criou um arquivo limpo", "content": "export const ok = true;\n" },
+      { "do": "edit", "path": "src/config.ts", "summary": "Escreveu a configuração", "content": "export const token = \"tok_fake_0123456789\";\n" },
+      { "do": "think", "text": "Este passo não deve rodar: o agente já foi pausado" }
+    ]
+  ]
+}

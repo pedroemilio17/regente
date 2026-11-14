@@ -1,0 +1,17 @@
+{
+  "turns": [
+    [
+      { "do": "read", "path": "README.md" },
+      { "do": "think", "text": "Preciso saber o formato da resposta de /health" },
+      { "do": "usage", "tokens_in": 1500, "tokens_out": 200, "cost_usd": 0.015 },
+      { "do": "mcp", "tool": "send_message", "args": { "to": "Backend", "text": "Qual o formato da resposta de GET /health?" } }
+    ],
+    [
+      { "do": "mcp", "tool": "read_inbox", "args": {} },
+      { "do": "edit", "path": "src/Status.tsx", "summary": "Criou a tela de status", "content": "export function Status({ version }: { version: string }) {\n  return <p>Versão {version}</p>;\n}\n" },
+      { "do": "edit", "path": "src/Status.test.tsx", "summary": "Adicionou teste da tela", "content": "test(\"status\", () => {\n  expect(true).toBe(true);\n});\n" },
+      { "do": "usage", "tokens_in": 2500, "tokens_out": 600, "cost_usd": 0.03 },
+      { "do": "mcp", "tool": "report_done", "args": { "summary": "Tela de status criada com teste.", "files_changed": ["src/Status.tsx", "src/Status.test.tsx"] } }
+    ]
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "repeat_last": true,
+  "turns": [
+    [
+      { "do": "edit", "path": "src/loop.ts", "summary": "Reescreveu o arquivo", "content": "export const n = 1;\n" },
+      { "do": "usage", "tokens_in": 20000, "tokens_out": 4000, "cost_usd": 0.3 },
+      { "do": "edit", "path": "src/loop.ts", "summary": "Reescreveu de novo", "content": "export const n = 2;\n" },
+      { "do": "usage", "tokens_in": 20000, "tokens_out": 4000, "cost_usd": 0.3 },
+      { "do": "edit", "path": "src/loop.ts", "summary": "Mais uma vez", "content": "export const n = 3;\n" },
+      { "do": "usage", "tokens_in": 20000, "tokens_out": 4000, "cost_usd": 0.3 },
+      { "do": "usage", "tokens_in": 20000, "tokens_out": 4000, "cost_usd": 0.3 }
+    ]
+  ]
+}

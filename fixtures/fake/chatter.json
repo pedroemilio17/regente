@@ -1,0 +1,9 @@
+{
+  "repeat_last": true,
+  "turns": [
+    [
+      { "do": "mcp", "tool": "read_inbox", "args": {} },
+      { "do": "mcp", "tool": "send_message", "args": { "to": "{{peer}}", "text": "E você, o que acha?" } }
+    ]
+  ]
+}
