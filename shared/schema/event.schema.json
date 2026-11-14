@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://regente.local/schema/event.schema.json",
+  "title": "RegenteEvent",
+  "description": "Normalized event. Everything the UI shows comes from one of these.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["seq", "id", "ts", "agent_id", "kind", "summary"],
+  "properties": {
+    "seq": { "type": "integer", "description": "Order of the event in the append-only log." },
+    "id": { "type": "string", "pattern": "^evt_" },
+    "ts": { "type": "string", "format": "date-time", "description": "UTC, RFC 3339." },
+    "agent_id": { "type": "string" },
+    "task_id": { "type": "string" },
+    "kind": { "$ref": "#/$defs/EventKind" },
+    "target": { "type": "string", "description": "File, command, agent name or action the event is about." },
+    "summary": { "type": "string" },
+    "lines_added": { "type": "integer", "minimum": 0 },
+    "lines_removed": { "type": "integer", "minimum": 0 },
+    "usage": { "$ref": "#/$defs/Usage" },
+    "raw_ref": { "type": "string", "description": "Raw CLI output this event came from, relative to the daemon home." },
+    "data": {
+      "type": "object",
+      "description": "Extra detail by kind: status, reason, diff, diff_ref, output, approval_id, severity, message fields, budget_warning.",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "EventKind": {
+      "type": "string",
+      "enum": [
+        "status",
+        "thinking",
+        "file_read",
+        "file_edit",
+        "command",
+        "command_result",
+        "message_sent",
+        "message_received",
+        "task_assigned",
+        "task_done",
+        "approval_requested",
+        "approval_decided",
+        "security_alert",
+        "error"
+      ]
+    },
+    "AgentStatus": {
+      "type": "string",
+      "enum": ["working", "thinking", "waiting", "idle", "paused"]
+    },
+    "Usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tokens_in", "tokens_out", "tokens_cache", "cost_usd", "cost_source"],
+      "properties": {
+        "tokens_in": { "type": "integer", "minimum": 0 },
+        "tokens_out": { "type": "integer", "minimum": 0 },
+        "tokens_cache": { "type": "integer", "minimum": 0 },
+        "cost_usd": { "type": "number", "minimum": 0 },
+        "cost_source": {
+          "type": "string",
+          "enum": ["reported", "estimated"],
+          "description": "reported when the CLI gives the cost, estimated when computed from tokens."
+        }
+      }
+    }
+  }
+}

@@ -282,11 +282,8 @@ impl App {
 
     /// Append an event, update the live state and queue it for the next batch.
     pub fn emit(&self, new: NewEvent) -> AppResult<Event> {
-        let account_id = self
-            .store
-            .get_agent(&new.agent_id)
-            .ok()
-            .and_then(|agent| agent.account_id);
+        let agent = self.store.get_agent(&new.agent_id).ok();
+        let account_id = agent.as_ref().and_then(|agent| agent.account_id.clone());
         let mut event = Event {
             seq: 0,
             id: new_id("evt"),
@@ -302,6 +299,10 @@ impl App {
             raw_ref: new.raw_ref,
             data: new.data,
         };
+        // Last line of defense: a secret value never reaches an event.
+        let leaked = agent
+            .as_ref()
+            .is_some_and(|agent| self.redact(&agent.project_id, &mut event));
         event.seq = self.store.append_event(&event, account_id.as_deref())?;
         self.live
             .write()
@@ -311,7 +312,50 @@ impl App {
         if event.usage.is_some() {
             crate::usage::after_usage(self, &event)?;
         }
+        if leaked {
+            let task_id = event.task_id.clone();
+            self.emit(
+                NewEvent::new(
+                    &event.agent_id,
+                    EventKind::SecurityAlert,
+                    "Um evento continha um valor de segredo e foi removido",
+                )
+                .task(task_id.as_deref())
+                .data(json!({ "severity": "critical", "reason": "valor de segredo do .env" })),
+            )?;
+            self.pause_agent(&event.agent_id, "Saída com valor de segredo")?;
+        }
         Ok(event)
+    }
+
+    /// Replace the text of an event that carries a secret value of the project.
+    fn redact(&self, project_id: &str, event: &mut Event) -> bool {
+        let secrets = self
+            .secrets
+            .read()
+            .unwrap_or_else(|p| p.into_inner())
+            .get(project_id)
+            .cloned();
+        let Some(secrets) = secrets.filter(|set| !set.is_empty()) else {
+            return false;
+        };
+        let data = event
+            .data
+            .as_ref()
+            .map(Value::to_string)
+            .unwrap_or_default();
+        let text = format!(
+            "{}\n{}\n{data}",
+            event.summary,
+            event.target.as_deref().unwrap_or("")
+        );
+        if !secrets.contains_secret(&text) {
+            return false;
+        }
+        event.summary = "[conteúdo removido: continha um valor de segredo]".to_string();
+        event.target = None;
+        event.data = Some(json!({ "redacted": true }));
+        true
     }
 
     pub fn live_of(&self, agent_id: &str) -> AgentLive {
@@ -722,6 +766,37 @@ mod tests {
         app.decide_approval(&approval.id, true, "pedro").unwrap();
         assert!(rx.await.unwrap());
         assert!(app.decide_approval(&approval.id, false, "pedro").is_err());
+    }
+
+    #[tokio::test]
+    async fn events_never_carry_secret_values() {
+        let dir = tempfile::tempdir().unwrap();
+        // Fake value only.
+        std::fs::write(dir.path().join(".env"), "API_TOKEN=tok_fake_0123456789\n").unwrap();
+        let app = app(dir.path());
+        let project = project(&app, dir.path());
+        let agent = agent(&app, &project, "Backend", "basic", false);
+        crate::security::watcher::refresh_secrets(&app, &project.id, dir.path());
+        let event = app
+            .emit(
+                NewEvent::new(
+                    &agent.id,
+                    EventKind::CommandResult,
+                    "token=tok_fake_0123456789",
+                )
+                .target("printenv")
+                .with("output", json!("API_TOKEN=tok_fake_0123456789")),
+            )
+            .unwrap();
+        assert!(event.summary.contains("conteúdo removido"));
+        assert_eq!(event.data.unwrap()["redacted"], true);
+        let stored = serde_json::to_string(&app.store.all_events().unwrap()).unwrap();
+        assert!(!stored.contains("tok_fake_0123456789"));
+        assert!(app.store.get_agent(&agent.id).unwrap().paused);
+        let clean = app
+            .emit(NewEvent::new(&agent.id, EventKind::Thinking, "nada demais"))
+            .unwrap();
+        assert_eq!(clean.summary, "nada demais");
     }
 
     #[tokio::test]

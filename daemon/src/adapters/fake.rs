@@ -168,6 +168,14 @@ async fn run_step(
             }
         }
         "edit" => edit(app, ctx, step, outcome).await?,
+        "shell_write" => {
+            // A file changed by a shell command: no edit event, like `printf > file` in a real CLI.
+            let full = ctx.cwd.join(text("path"));
+            if let Some(dir) = full.parent() {
+                tokio::fs::create_dir_all(dir).await?;
+            }
+            tokio::fs::write(&full, text("content")).await?;
+        }
         "command" => {
             let command = text("cmd");
             if let Some(action) = security::classify_command(&command) {

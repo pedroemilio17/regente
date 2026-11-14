@@ -5,6 +5,7 @@
       { "do": "edit", "path": "src/health.ts", "summary": "Criou a rota GET /health", "content": "export function health() {\n  return { status: \"ok\", version: \"0.1.0\" };\n}\n" },
       { "do": "edit", "path": "src/health.test.ts", "summary": "Adicionou teste da rota", "content": "import { health } from \"./health\";\n\ntest(\"health\", () => {\n  expect(health().status).toBe(\"ok\");\n});\n" },
       { "do": "command", "cmd": "pnpm test", "output": "1 passed" },
+      { "do": "shell_write", "path": "CHANGELOG.md", "content": "- rota /health\n" },
       { "do": "usage", "tokens_in": 3000, "tokens_out": 700, "tokens_cache": 1500, "cost_usd": 0.04 },
       { "do": "mcp", "tool": "report_done", "args": { "summary": "Rota GET /health criada com teste.", "files_changed": ["src/health.ts", "src/health.test.ts"] } }
     ]

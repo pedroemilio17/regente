@@ -93,10 +93,13 @@ impl AgyParser {
                     }
                 } else if !is_edit_tool(name) && is_read_tool(name) {
                     let path = param("Path");
-                    out.push(Parsed::Event(
-                        self.event(EventKind::FileRead, format!("Leu {path}"))
-                            .target(path),
-                    ));
+                    // agy reads the tool description file before each MCP call: not project work.
+                    if !path.contains("/antigravity-cli/mcp/") {
+                        out.push(Parsed::Event(
+                            self.event(EventKind::FileRead, format!("Leu {path}"))
+                                .target(path),
+                        ));
+                    }
                 }
             }
             "DONE" => {

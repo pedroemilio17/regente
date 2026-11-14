@@ -491,17 +491,38 @@ async fn run_turn(
     if git {
         // Last look before the checkpoint: a leak blocks the commit.
         let mut leaked = false;
-        for file in worktree::changed_files(&cwd).await.unwrap_or_default() {
+        let changed = worktree::changed_files(&cwd).await.unwrap_or_default();
+        for file in &changed {
             leaked |= watcher::check_written_file(
                 app,
                 &agent.id,
                 Some(&task.id),
                 &project.id,
                 &cwd,
-                &cwd.join(&file),
+                &cwd.join(file),
             )?;
         }
         if !leaked && !app.store.get_agent(&agent.id)?.paused {
+            // Files changed through a shell command have no edit event of their own.
+            let reported: Vec<String> = app
+                .store
+                .task_events(&task.id)?
+                .into_iter()
+                .filter(|event| event.seq > start_seq && event.kind == EventKind::FileEdit)
+                .filter_map(|event| event.target)
+                .collect();
+            for file in changed.iter().filter(|file| !reported.contains(file)) {
+                let (added, removed) = worktree::numstat(&cwd, file).await.unwrap_or((0, 0));
+                let mut event =
+                    NewEvent::new(&agent.id, EventKind::FileEdit, format!("Alterou {file}"))
+                        .task(Some(&task.id))
+                        .target(file.clone())
+                        .lines(added, removed);
+                if let Some(diff) = worktree::diff(&cwd, file).await {
+                    event = adapters::attach_diff(app, event, diff);
+                }
+                app.emit(event)?;
+            }
             worktree::checkpoint(&cwd, &agent.name, &task.id, &task.title).await?;
         }
     }
@@ -537,6 +558,9 @@ async fn after_turn(
     let children = app.store.child_tasks(&task.id)?;
 
     if fresh.status == "done" {
+        if !agent_now.paused {
+            app.emit(NewEvent::status(&agent.id, "idle", "Tarefa concluída").task(Some(&task.id)))?;
+        }
         return finish_task(app, &fresh, agent).await;
     }
     if agent_now.paused {

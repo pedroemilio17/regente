@@ -42,3 +42,36 @@ Cada entrada: o que foi encontrado, o que foi escolhido e por quê.
 
 - **Encontrado**: hooks e plugins de `~/.claude/settings.json` entram nas execuções headless e podem barrar ferramentas dos agentes.
 - **Escolhido**: o adaptador sobe o Claude Code com `--setting-sources project` e passa as regras do Regente por `--settings`.
+
+## D7 — Integração só no fim, com aprovação
+
+- **Encontrado**: o system design descreve merge de cada etapa na branch da tarefa e depois na base.
+- **Escolhido**: cada agente trabalha na própria branch; uma etapa que depende de outras recebe o merge delas ao criar o worktree; a integração na branch base acontece uma vez, quando a tarefa raiz termina e o Pedro aprova (squash de cada branch de agente).
+- **Por quê**: cobre o cenário de aceitação (QA vê o trabalho de Backend e Frontend; merge final espera aprovação) sem manter uma branch intermediária.
+
+## D8 — Preparar worktree sem instalar dependências
+
+- **Escolhido**: "preparar" gera o `.env.regente` e reserva a faixa de portas. Instalar dependências a partir de cache compartilhado fica para depois do MVP.
+
+## D9 — Tarefa fecha sozinha quando o CLI não chama `report_done`
+
+- **Encontrado**: um CLI pode encerrar o turno sem chamar `report_done`.
+- **Escolhido**: sem etapas abertas, sem mensagens pendentes e sem pergunta enviada no turno, a tarefa fecha com a última resposta do CLI como resumo. Se o agente enviou uma mensagem, a tarefa fica aguardando a resposta.
+
+## D10 — Resposta a mensagem vira uma tarefa curta
+
+- **Encontrado**: um agente pode receber uma pergunta depois de já ter fechado a própria tarefa.
+- **Escolhido**: o daemon abre uma tarefa "Responder a <agente>", filha da mesma tarefa, que fecha após um turno.
+
+## D11 — Terminal sob demanda é um shell no worktree
+
+- **Encontrado**: em modo headless não existe um terminal do CLI para anexar.
+- **Escolhido**: "Abrir terminal" cria um PTY com um shell no worktree mais recente do agente (ambiente limpo), destruído ao fechar.
+
+## D12 — Formatação padrão do rustfmt
+
+- Sem `rustfmt.toml`: largura padrão de 100 colunas.
+
+## D13 — Registro do mensageiro no agy
+
+- Na primeira execução de um agente agy, o daemon roda `agy mcp add regente <regented> mcp-stdio` (configuração global do agy) e marca isso em `~/.config/regente/agy-mcp-registered`. Validado na rodada real: o agy repassa `REGENTE_MCP_URL` ao processo MCP filho, então a decisão D3 se confirmou.

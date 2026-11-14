@@ -31,6 +31,10 @@ pub async fn run(
     }
     let mut raw_file = tokio::fs::File::create(&raw_path).await?;
 
+    if ctx.agent.cli == "agy" {
+        register_agy_messenger(app, &spec.program).await;
+    }
+
     let mut child = Command::new(&spec.program)
         .args(&spec.args)
         .current_dir(&ctx.cwd)
@@ -133,4 +137,32 @@ pub async fn run(
         );
     }
     Ok(outcome)
+}
+
+/// agy only reads MCP servers from its global config, so the messenger is
+/// registered there once, as a stdio bridge back to this daemon.
+async fn register_agy_messenger(app: &App, program: &str) {
+    let marker = app.cfg.home.join("agy-mcp-registered");
+    if marker.exists() {
+        return;
+    }
+    let Ok(daemon) = std::env::current_exe() else {
+        return;
+    };
+    let added = Command::new(program)
+        .args(["mcp", "add", "regente"])
+        .arg(&daemon)
+        .arg("mcp-stdio")
+        .stdin(Stdio::null())
+        .output()
+        .await;
+    match added {
+        Ok(output) if output.status.success() => {
+            let _ = tokio::fs::write(&marker, daemon.to_string_lossy().as_bytes()).await;
+        }
+        Ok(output) => {
+            tracing::warn!(stderr = %String::from_utf8_lossy(&output.stderr), "agy mcp add failed")
+        }
+        Err(error) => tracing::warn!(%error, "could not run agy mcp add"),
+    }
 }

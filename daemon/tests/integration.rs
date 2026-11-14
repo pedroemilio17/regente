@@ -898,6 +898,20 @@ async fn orchestrator_delegates_agents_talk_and_merge_waits_for_approval() {
         qa_worktree.join("src/health.ts").exists() && qa_worktree.join("src/Status.tsx").exists()
     );
 
+    // A file changed through a shell command still shows up as a change.
+    let by_shell = events
+        .iter()
+        .find(|e| e.kind == EventKind::FileEdit && e.target.as_deref() == Some("CHANGELOG.md"))
+        .unwrap();
+    assert_eq!(
+        (by_shell.agent_id.as_str(), by_shell.lines_added),
+        (backend.as_str(), Some(1))
+    );
+    // Agents that are done are shown as idle, not as working.
+    for agent in [&backend, &frontend, &qa] {
+        assert_eq!(d.app.live_of(agent).status, "idle");
+    }
+
     // Budget respected, per-account usage visible, no secret anywhere.
     let spent = d.app.store.cost_of_task_tree(&task).unwrap();
     assert!(spent > 0.0 && spent < 2.0, "spent {spent}");
