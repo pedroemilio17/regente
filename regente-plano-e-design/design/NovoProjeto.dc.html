@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Regente — novo projeto</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262624}
+a{color:#ECEAE3}a:hover{color:#FFFFFF}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7%)}}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.95)}}
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(0.1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+.pet{transform-origin:50% 100%;overflow:visible}
+.pet.work{animation:bob 0.7s ease-in-out infinite}
+.pet.think{animation:sway 1.8s ease-in-out infinite}
+.pet.wait{animation:breathe 1.4s ease-in-out infinite}
+.pet.idle{animation:breathe 3.2s ease-in-out infinite}
+.pet .eyes{transform-box:fill-box;transform-origin:center;animation:blink 4s infinite}
+.live{animation:pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.pet,.pet .eyes,.live{animation:none !important}}
+</style>
+</helmet>
+<div style="min-height: 1700px; display: flex; flex-wrap: wrap; background: #262624; color: #ECEAE3; font-family: Inter, system-ui, sans-serif; font-size: 14px">
+<nav aria-label="Navegação principal" style="flex: 1 1 264px; max-width: 100%; box-sizing: border-box; background: #1F1E1D; border-right: 1px solid #33322E; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px">
+  <div style="display: flex; align-items: center; gap: 10px; padding: 6px 10px 14px">
+    <svg width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="2" width="12" height="12" fill="#ECC56A"></rect><rect x="5" y="6" width="2" height="2" fill="#1F1E1D"></rect><rect x="9" y="6" width="2" height="2" fill="#1F1E1D"></rect><rect x="5" y="10" width="6" height="1" fill="#1F1E1D"></rect></svg>
+    <span style="font-size: 16px; font-weight: 600">Regente</span>
+  </div>
+  <a href="Criar.dc.html" aria-current="page" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: #2F2E2B"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Criar</a>
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path></svg>Procurar</a>
+  <a href="Skills.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13h6l-1 8 8-10h-6l1-8z"></path></svg>Skills</a>
+  <a href="Plugins.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6v4h4v6h-4v6H9v-6H5V8h4z"></path></svg>Plugins</a>
+
+  <div style="display: flex; align-items: center; gap: 6px; padding: 18px 10px 6px; color: #A3A19A; font-size: 13px">Projetos <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></div>
+
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; font-size: 15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v4H4zM5 10v9h14v-9M10 14h4"></path></svg>DeSol</a>
+
+  <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; margin-left: 18px; padding: 7px 10px; border-radius: 8px; text-decoration: none; background: transparent">
+    <svg class="pet idle" width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="#F7E3AE"></rect><rect x="8" y="1" width="1" height="2" fill="#B8902F"></rect><rect x="3" y="2" width="2" height="2" fill="#ECC56A"></rect><rect x="11" y="2" width="2" height="2" fill="#ECC56A"></rect><rect x="4" y="3" width="8" height="1" fill="#ECC56A"></rect><rect x="3" y="4" width="10" height="8" fill="#ECC56A"></rect><rect x="3" y="10" width="10" height="2" fill="#B8902F"></rect><rect x="4" y="12" width="8" height="1" fill="#B8902F"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g></svg>
+    <span style="font-weight: 600; flex: 1">Orquestrador</span>
+    <span style="font-size: 12px; color: #A3A19A">US$ 0,29</span>
+  </a>
+  <div style="margin-left: 32px; padding-left: 8px; border-left: 1px solid #3A3934; display: flex; flex-direction: column; gap: 2px">
+    <sc-for list="{{agents}}" as="a" hint-placeholder-count="4">
+      <a href="Agente.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; text-decoration: none; background: {{a.rowBg}}">
+        <svg class="pet {{a.anim}}" width="18" height="18" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="{{a.light}}" fill-opacity="{{a.antenna}}"></rect><rect x="8" y="1" width="1" height="2" fill="{{a.dark}}" fill-opacity="{{a.antenna}}"></rect><rect x="3" y="2" width="2" height="2" fill="{{a.color}}" fill-opacity="{{a.ears}}"></rect><rect x="11" y="2" width="2" height="2" fill="{{a.color}}" fill-opacity="{{a.ears}}"></rect><rect x="4" y="3" width="8" height="1" fill="{{a.color}}"></rect><rect x="3" y="4" width="10" height="8" fill="{{a.color}}"></rect><rect x="3" y="10" width="10" height="2" fill="{{a.dark}}"></rect><rect x="4" y="12" width="8" height="1" fill="{{a.dark}}"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g></svg>
+        <span style="flex: 1; font-weight: {{a.weight}}">{{a.name}}</span>
+        <span class="{{a.liveClass}}" title="{{a.statusLabel}}" style="width: 8px; height: 8px; border-radius: 4px; background: {{a.dot}}"></span>
+        <span style="font-size: 12px; color: #A3A19A; min-width: 54px; text-align: right">{{a.costStr}}</span>
+      </a>
+    </sc-for>
+  </div>
+  <a href="#" style="padding: 7px 10px 7px 28px; color: #9B9993; text-decoration: none; font-size: 14px">Ver todos</a>
+
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; font-size: 15px; color: #C9C7BF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v4H4zM5 10v9h14v-9M10 14h4"></path></svg>SenacPAT<svg style="margin-left: auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+
+  <div style="flex: 1; min-height: 24px"></div>
+  <section aria-label="Uso dos planos" style="background: #262624; border: 1px solid #33322E; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13px"><span style="color: #A3A19A">Uso dos planos</span><span style="font-weight: 600">US$ 2,94 hoje</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #E8915B"></span><span style="flex: 1; font-weight: 500">Claude</span><span style="font-size: 12px; color: #A3A19A">US$ 1,59</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>5h</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 62%; height: 5px; border-radius: 3px; background: #E8915B"></span></span><span style="text-align: right; color: #DAD8D0">62%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 38%; height: 5px; border-radius: 3px; background: #E8915B"></span></span><span style="text-align: right; color: #DAD8D0">38%</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #7FA2F7"></span><span style="flex: 1; font-weight: 500">ChatGPT</span><span style="font-size: 12px; color: #A3A19A">US$ 0,94</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>5h</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 41%; height: 5px; border-radius: 3px; background: #7FA2F7"></span></span><span style="text-align: right; color: #DAD8D0">41%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 22%; height: 5px; border-radius: 3px; background: #7FA2F7"></span></span><span style="text-align: right; color: #DAD8D0">22%</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #B08CF0"></span><span style="flex: 1; font-weight: 500">Gemini</span><span style="font-size: 12px; color: #A3A19A">US$ 0,41</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>Dia</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 18%; height: 5px; border-radius: 3px; background: #B08CF0"></span></span><span style="text-align: right; color: #DAD8D0">18%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 9%; height: 5px; border-radius: 3px; background: #B08CF0"></span></span><span style="text-align: right; color: #DAD8D0">9%</span></div>
+    </div>
+  </section>
+  <a href="Perfis.dc.html" aria-label="Pedro: contas e perfis das IAs" style="display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px; border-radius: 10px; text-decoration: none; background: transparent">
+    <span style="width: 32px; height: 32px; border-radius: 16px; background: #3A3934; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex: 0 0 auto">P</span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 500">Pedro</span><span style="font-size: 12px; color: #A3A19A">3 contas de IA conectadas</span></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A19A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg>
+  </a>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 22px">
+  <header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <div style="font-size: 13px; color: #A3A19A"><a href="Criar.dc.html" style="color: #A3A19A">Criar</a> / Novo projeto</div>
+      <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">Novo projeto</h1>
+      <p style="margin: 2px 0 0; color: #C9C7BF; max-width: 640px; line-height: 1.5">Defina onde os agentes podem mexer, o que eles precisam saber e quem faz parte do time.</p>
+    </div>
+    
+  </header>
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+    <form style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 18px">
+      <section aria-label="Projeto" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Projeto</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px">
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #C9C7BF">Nome<input type="text" value="DeSol" style="min-height: 40px; box-sizing: border-box; width: 100%; padding: 0 12px; border: 1px solid #3A3934; border-radius: 10px; background: #1F1E1D; color: #ECEAE3; font: inherit; font-size: 14px"></label>
+          <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #C9C7BF">Orçamento diário (US$)<input type="text" value="5,00" style="min-height: 40px; box-sizing: border-box; width: 100%; padding: 0 12px; border: 1px solid #3A3934; border-radius: 10px; background: #1F1E1D; color: #ECEAE3; font: inherit; font-size: 14px"></label>
+        </div>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #C9C7BF">Descrição curta<input type="text" value="Painel de monitoramento do dessalinizador solar" style="min-height: 40px; box-sizing: border-box; width: 100%; padding: 0 12px; border: 1px solid #3A3934; border-radius: 10px; background: #1F1E1D; color: #ECEAE3; font: inherit; font-size: 14px"></label>
+      </section>
+
+      <section aria-label="Pastas e permissões" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Pastas e permissões</h2><button type="button" style="min-height: 40px; padding: 0 16px; border: 1px solid #3A3934; border-radius: 10px; background: transparent; color: #ECEAE3; font: inherit; cursor: pointer">Adicionar pasta</button></div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{folders}}" as="f" hint-placeholder-count="2">
+            <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: #22211F">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A19A" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h7l2 2h9v11H3z"></path></svg>
+              <span style="flex: 1 1 200px; min-width: 0; font-family: 'JetBrains Mono', monospace; font-size: 13px">{{f.path}}</span>
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: #A3A19A">Acesso<select style="min-height: 34px; padding: 0 8px; border: 1px solid #3A3934; border-radius: 8px; background: #1F1E1D; color: #ECEAE3; font: inherit; font-size: 13px"><option>{{f.access}}</option><option>{{f.other}}</option></select></label>
+              <button type="button" aria-label="Remover {{f.path}}" style="width: 34px; height: 34px; border: 0; border-radius: 8px; background: transparent; color: #A3A19A; cursor: pointer; font-size: 18px">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 13px; color: #C9C7BF">Nunca acessar</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px">
+            <sc-for list="{{blocked}}" as="b" hint-placeholder-count="3"><span style="padding: 4px 10px; border-radius: 999px; background: #3A3934; font-family: 'JetBrains Mono', monospace; font-size: 12px">{{b}}</span></sc-for>
+            <span style="padding: 4px 10px; border-radius: 999px; border: 1px dashed #4A4944; font-size: 12px; color: #A3A19A">+ padrão</span>
+          </div>
+        </div>
+        <label style="display: flex; gap: 12px; align-items: flex-start; font-size: 14px; cursor: pointer"><input type="checkbox" checked style="width: 18px; height: 18px; margin: 2px 0 0; accent-color: #ECC56A; flex: 0 0 auto"><span style="display: flex; flex-direction: column; gap: 2px">Cada agente trabalha no próprio git worktree<span style="font-size: 12px; color: #A3A19A">Evita que dois agentes mexam no mesmo arquivo ao mesmo tempo</span></span></label>
+      </section>
+
+      <section aria-label="Contexto" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Contexto</h2>
+        <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #C9C7BF">O que todos os agentes precisam saber<textarea rows="6" style="box-sizing: border-box; width: 100%; padding: 10px 12px; border: 1px solid #3A3934; border-radius: 10px; background: #1F1E1D; color: #ECEAE3; font: inherit; font-size: 14px; line-height: 1.5; resize: vertical">Sistema de monitoramento de um dessalinizador solar. Sensores enviam leituras por ESP32/LoRa para uma API Node + TypeScript com Postgres. O painel é React. Unidade de salinidade: mS/cm. Fuso: America/Cuiaba.</textarea></label>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center">
+          <span style="font-size: 12px; color: #A3A19A">Gera automaticamente</span>
+          <span style="padding: 3px 9px; border-radius: 6px; font-size: 12px; font-family: 'JetBrains Mono', monospace; background: rgba(232,145,91,0.15); color: #F2B48C">CLAUDE.md</span>
+          <span style="padding: 3px 9px; border-radius: 6px; font-size: 12px; font-family: 'JetBrains Mono', monospace; background: rgba(127,162,247,0.16); color: #B5C8FB">AGENTS.md</span>
+          <span style="padding: 3px 9px; border-radius: 6px; font-size: 12px; font-family: 'JetBrains Mono', monospace; background: rgba(176,140,240,0.17); color: #D3BEF8">GEMINI.md</span>
+        </div>
+      </section>
+
+      <section aria-label="Anexos" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Anexos</h2>
+        <button type="button" style="min-height: 96px; border: 1px dashed #4A4944; border-radius: 12px; background: #22211F; color: #C9C7BF; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px"><span>Arraste arquivos ou clique para escolher</span><span style="font-size: 12px; color: #A3A19A">PDF, imagens, especificações, planilhas</span></button>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{files}}" as="f" hint-placeholder-count="3">
+            <div style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #22211F; font-size: 13px">
+              <span style="padding: 2px 6px; border-radius: 4px; background: #3A3934; font-size: 11px; font-weight: 600; color: #DAD8D0">{{f.ext}}</span>
+              <span style="flex: 1; min-width: 0; font-family: 'JetBrains Mono', monospace; font-size: 12px">{{f.name}}</span>
+              <span style="font-size: 12px; color: #A3A19A">{{f.size}}</span>
+            </div>
+          </sc-for>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #A3A19A; line-height: 1.5">Os agentes recebem os anexos como referência, numa pasta só de leitura.</p>
+      </section>
+
+      <section aria-label="Time de agentes" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Time de agentes</h2><a href="NovoAgente.dc.html" style="font-size: 13px; color: #C9C7BF">Criar novo agente</a></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px">
+          <button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #ECEAE3; background: #34332F; color: #ECEAE3; font: inherit; font-size: 13px; cursor: pointer">Time web (4 agentes)</button>
+          <button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #3A3934; background: #22211F; color: #ECEAE3; font: inherit; font-size: 13px; cursor: pointer">Só um agente</button>
+          <button type="button" style="min-height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid #3A3934; background: #22211F; color: #ECEAE3; font: inherit; font-size: 13px; cursor: pointer">Personalizado</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <sc-for list="{{team}}" as="t" hint-placeholder-count="5">
+            <label style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #22211F; cursor: pointer">
+              <input type="checkbox" checked style="width: 18px; height: 18px; margin: 2px 0 0; accent-color: #ECC56A; flex: 0 0 auto; margin: 0">
+              <svg class="pet {{t.anim}}" width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="{{t.light}}" fill-opacity="{{t.antenna}}"></rect><rect x="8" y="1" width="1" height="2" fill="{{t.dark}}" fill-opacity="{{t.antenna}}"></rect><rect x="3" y="2" width="2" height="2" fill="{{t.color}}" fill-opacity="{{t.ears}}"></rect><rect x="11" y="2" width="2" height="2" fill="{{t.color}}" fill-opacity="{{t.ears}}"></rect><rect x="4" y="3" width="8" height="1" fill="{{t.color}}"></rect><rect x="3" y="4" width="10" height="8" fill="{{t.color}}"></rect><rect x="3" y="10" width="10" height="2" fill="{{t.dark}}"></rect><rect x="4" y="12" width="8" height="1" fill="{{t.dark}}"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g></svg>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-weight: 500">{{t.name}}</span><span style="font-size: 12px; color: #A3A19A">{{t.role}}</span></span>
+              <span style="padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; background: {{t.cliBg}}; color: {{t.cliFg}}">{{t.cli}}</span>
+            </label>
+          </sc-for>
+        </div>
+      </section>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px">
+        <a href="Main.dc.html" style="min-height: 40px; padding: 0 16px; border: 1px solid #3A3934; border-radius: 10px; background: transparent; color: #ECEAE3; font: inherit; cursor: pointer; display: inline-flex; align-items: center; text-decoration: none">Cancelar</a>
+        <a href="Main.dc.html" style="min-height: 40px; padding: 0 18px; border: 0; border-radius: 10px; background: #ECEAE3; color: #1F1E1D; font: inherit; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; text-decoration: none">Criar projeto</a>
+      </div>
+    </form>
+
+    <aside aria-label="Resumo" style="flex: 1 1 300px; min-width: 0; background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-direction: column; gap: 16px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 600">Resumo</h2>
+      <dl style="margin: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px 16px; font-size: 13px">
+        <dt style="color: #A3A19A">Pastas</dt><dd style="margin: 0">2 (1 com escrita)</dd>
+        <dt style="color: #A3A19A">Bloqueados</dt><dd style="margin: 0">3 padrões</dd>
+        <dt style="color: #A3A19A">Anexos</dt><dd style="margin: 0">3 arquivos</dd>
+        <dt style="color: #A3A19A">Time</dt><dd style="margin: 0">Orquestrador + 4 agentes</dd>
+        <dt style="color: #A3A19A">CLIs</dt><dd style="margin: 0">Claude Code, Codex, Gemini CLI</dd>
+        <dt style="color: #A3A19A">Orçamento</dt><dd style="margin: 0">US$ 5,00 por dia</dd>
+      </dl>
+      <p style="margin: 0; font-size: 12px; color: #A3A19A; line-height: 1.5">Depois de criado, o orquestrador já aparece na barra lateral dentro do projeto.</p>
+    </aside>
+  </div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1700}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const SB_ST = {
+      work: { label: 'Trabalhando', dot: '#5FC48A', anim: 'work', live: 'live' },
+      think: { label: 'Pensando', dot: '#E8B34B', anim: 'think', live: 'live' },
+      wait: { label: 'Aguardando', dot: '#7FA2F7', anim: 'wait', live: '' },
+      idle: { label: 'Ocioso', dot: '#8A8880', anim: 'idle', live: '' }
+    };
+    const sbFmt = (v) => 'US$ ' + v.toFixed(2).replace('.', ',');
+    const agents = [
+      { name: 'Backend', color: '#7FA2F7', dark: '#4C6FC4', light: '#C4D4FB', ears: 0, antenna: 1, status: 'work', cost: 0.94 },
+      { name: 'Frontend', color: '#B08CF0', dark: '#7C5BC0', light: '#DCCBF9', ears: 1, antenna: 1, status: 'think', cost: 0.41 },
+      { name: 'Arquiteto', color: '#E8915B', dark: '#B4643A', light: '#F6C3A0', ears: 1, antenna: 0, status: 'wait', cost: 1.12 },
+      { name: 'QA', color: '#6CC79A', dark: '#3F9468', light: '#BDEBD3', ears: 0, antenna: 0, status: 'idle', cost: 0.18 }
+    ].map((a) => {
+      const s = SB_ST[a.status];
+      const on = a.name === '';
+      return Object.assign({}, a, { statusLabel: s.label, dot: s.dot, anim: s.anim, liveClass: s.live, costStr: sbFmt(a.cost), rowBg: on ? '#2F2E2B' : 'transparent', weight: on ? 600 : 400 });
+    });
+    const CL = {
+      'Claude Code': { bg: 'rgba(232,145,91,0.15)', fg: '#F2B48C' },
+      'Codex': { bg: 'rgba(127,162,247,0.16)', fg: '#B5C8FB' },
+      'Gemini CLI': { bg: 'rgba(176,140,240,0.17)', fg: '#D3BEF8' }
+    };
+    const team = [
+      { name: 'Orquestrador', role: 'Orquestrador', cli: 'Claude Code', color: '#ECC56A', dark: '#B8902F', light: '#F7E3AE', ears: 1, antenna: 1 },
+      { name: 'Arquiteto', role: 'Planeja e revisa contratos', cli: 'Claude Code', color: '#E8915B', dark: '#B4643A', light: '#F6C3A0', ears: 1, antenna: 0 },
+      { name: 'Backend', role: 'API e banco', cli: 'Codex', color: '#7FA2F7', dark: '#4C6FC4', light: '#C4D4FB', ears: 0, antenna: 1 },
+      { name: 'Frontend', role: 'Painel React', cli: 'Gemini CLI', color: '#B08CF0', dark: '#7C5BC0', light: '#DCCBF9', ears: 1, antenna: 1 },
+      { name: 'QA', role: 'Testes e revisão', cli: 'Claude Code', color: '#6CC79A', dark: '#3F9468', light: '#BDEBD3', ears: 0, antenna: 0 }
+    ].map((t) => Object.assign({}, t, { anim: 'idle', cliBg: CL[t.cli].bg, cliFg: CL[t.cli].fg }));
+    return {
+      agents, team,
+      folders: [
+        { path: '~/projetos/desol', access: 'Leitura e escrita', other: 'Só leitura' },
+        { path: '~/projetos/desol-firmware', access: 'Só leitura', other: 'Leitura e escrita' }
+      ],
+      blocked: ['.env', 'secrets/', '*.pem'],
+      files: [
+        { ext: 'PDF', name: 'plano-desol.pdf', size: '2,1 MB' },
+        { ext: 'PNG', name: 'esquema-sensores.png', size: '640 KB' },
+        { ext: 'YAML', name: 'api-sensores.yaml', size: '12 KB' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

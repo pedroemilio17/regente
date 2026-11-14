@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Regente — agente Backend</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#262624}
+a{color:#ECEAE3}a:hover{color:#FFFFFF}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7%)}}
+@keyframes sway{0%,100%{transform:rotate(-5deg)}50%{transform:rotate(5deg)}}
+@keyframes breathe{0%,100%{transform:scaleY(1)}50%{transform:scaleY(0.95)}}
+@keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(0.1)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+.pet{transform-origin:50% 100%;overflow:visible}
+.pet.work{animation:bob 0.7s ease-in-out infinite}
+.pet.think{animation:sway 1.8s ease-in-out infinite}
+.pet.wait{animation:breathe 1.4s ease-in-out infinite}
+.pet.idle{animation:breathe 3.2s ease-in-out infinite}
+.pet .eyes{transform-box:fill-box;transform-origin:center;animation:blink 4s infinite}
+.live{animation:pulse 1.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.pet,.pet .eyes,.live{animation:none !important}}
+</style>
+</helmet>
+<div style="min-height: 1200px; display: flex; flex-wrap: wrap; background: #262624; color: #ECEAE3; font-family: Inter, system-ui, sans-serif; font-size: 14px">
+
+<nav aria-label="Navegação principal" style="flex: 1 1 264px; max-width: 100%; box-sizing: border-box; background: #1F1E1D; border-right: 1px solid #33322E; padding: 14px 10px; display: flex; flex-direction: column; gap: 2px; height: 1197px">
+  <div style="display: flex; align-items: center; gap: 10px; padding: 6px 10px 14px">
+    <svg width="22" height="22" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="2" y="2" width="12" height="12" fill="#ECC56A"></rect><rect x="5" y="6" width="2" height="2" fill="#1F1E1D"></rect><rect x="9" y="6" width="2" height="2" fill="#1F1E1D"></rect><rect x="5" y="10" width="6" height="1" fill="#1F1E1D"></rect></svg>
+    <span style="font-size: 16px; font-weight: 600">Regente</span>
+  </div>
+  <a href="Criar.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>Criar</a>
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="M20 20l-4-4"></path></svg>Procurar</a>
+  <a href="Skills.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M13 3L5 13h6l-1 8 8-10h-6l1-8z"></path></svg>Skills</a>
+  <a href="Plugins.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; text-decoration: none; font-size: 14px; background: transparent"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M9 4h6v4h4v6h-4v6H9v-6H5V8h4z"></path></svg>Plugins</a>
+
+  <div style="display: flex; align-items: center; gap: 6px; padding: 18px 10px 6px; color: #A3A19A; font-size: 13px">Projetos <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></div>
+
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; font-size: 15px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v4H4zM5 10v9h14v-9M10 14h4"></path></svg>DeSol</a>
+
+  <a href="Main.dc.html" style="display: flex; align-items: center; gap: 10px; margin-left: 18px; padding: 7px 10px; border-radius: 8px; text-decoration: none; background: transparent">
+    <svg class="pet idle" width="20" height="20" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="#F7E3AE"></rect><rect x="8" y="1" width="1" height="2" fill="#B8902F"></rect><rect x="3" y="2" width="2" height="2" fill="#ECC56A"></rect><rect x="11" y="2" width="2" height="2" fill="#ECC56A"></rect><rect x="4" y="3" width="8" height="1" fill="#ECC56A"></rect><rect x="3" y="4" width="10" height="8" fill="#ECC56A"></rect><rect x="3" y="10" width="10" height="2" fill="#B8902F"></rect><rect x="4" y="12" width="8" height="1" fill="#B8902F"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g></svg>
+    <span style="font-weight: 600; flex: 1">Orquestrador</span>
+    <span style="font-size: 12px; color: #A3A19A">US$ 0,29</span>
+  </a>
+  <div style="margin-left: 32px; padding-left: 8px; border-left: 1px solid #3A3934; display: flex; flex-direction: column; gap: 2px">
+    <sc-for list="{{agents}}" as="a" hint-placeholder-count="4">
+      <a href="Agente.dc.html" style="display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; text-decoration: none; background: {{a.rowBg}}">
+        <svg class="pet {{a.anim}}" width="18" height="18" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="{{a.light}}" fill-opacity="{{a.antenna}}"></rect><rect x="8" y="1" width="1" height="2" fill="{{a.dark}}" fill-opacity="{{a.antenna}}"></rect><rect x="3" y="2" width="2" height="2" fill="{{a.color}}" fill-opacity="{{a.ears}}"></rect><rect x="11" y="2" width="2" height="2" fill="{{a.color}}" fill-opacity="{{a.ears}}"></rect><rect x="4" y="3" width="8" height="1" fill="{{a.color}}"></rect><rect x="3" y="4" width="10" height="8" fill="{{a.color}}"></rect><rect x="3" y="10" width="10" height="2" fill="{{a.dark}}"></rect><rect x="4" y="12" width="8" height="1" fill="{{a.dark}}"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g></svg>
+        <span style="flex: 1; font-weight: {{a.weight}}">{{a.name}}</span>
+        <span class="{{a.liveClass}}" title="{{a.statusLabel}}" style="width: 8px; height: 8px; border-radius: 4px; background: {{a.dot}}"></span>
+        <span style="font-size: 12px; color: #A3A19A; min-width: 54px; text-align: right">{{a.costStr}}</span>
+      </a>
+    </sc-for>
+  </div>
+  <a href="#" style="padding: 7px 10px 7px 28px; color: #9B9993; text-decoration: none; font-size: 14px">Ver todos</a>
+
+  <a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; text-decoration: none; font-size: 15px; color: #C9C7BF"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v4H4zM5 10v9h14v-9M10 14h4"></path></svg>SenacPAT<svg style="margin-left: auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg></a>
+
+  <div style="flex: 1; min-height: 24px"></div>
+  <section aria-label="Uso dos planos" style="background: #262624; border: 1px solid #33322E; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 13px"><span style="color: #A3A19A">Uso dos planos</span><span style="font-weight: 600">US$ 2,94 hoje</span></div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #E8915B"></span><span style="flex: 1; font-weight: 500">Claude</span><span style="font-size: 12px; color: #A3A19A">US$ 1,59</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>5h</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 62%; height: 5px; border-radius: 3px; background: #E8915B"></span></span><span style="text-align: right; color: #DAD8D0">62%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 38%; height: 5px; border-radius: 3px; background: #E8915B"></span></span><span style="text-align: right; color: #DAD8D0">38%</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #7FA2F7"></span><span style="flex: 1; font-weight: 500">ChatGPT</span><span style="font-size: 12px; color: #A3A19A">US$ 0,94</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>5h</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 41%; height: 5px; border-radius: 3px; background: #7FA2F7"></span></span><span style="text-align: right; color: #DAD8D0">41%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 22%; height: 5px; border-radius: 3px; background: #7FA2F7"></span></span><span style="text-align: right; color: #DAD8D0">22%</span></div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px"><span style="width: 8px; height: 8px; background: #B08CF0"></span><span style="flex: 1; font-weight: 500">Gemini</span><span style="font-size: 12px; color: #A3A19A">US$ 0,41</span></div>
+      <div style="display: grid; grid-template-columns: 48px minmax(0, 1fr) 34px; gap: 6px 8px; align-items: center; font-size: 12px; color: #A3A19A"><span>Dia</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 18%; height: 5px; border-radius: 3px; background: #B08CF0"></span></span><span style="text-align: right; color: #DAD8D0">18%</span><span>Semana</span><span style="height: 5px; background: #3A3934; border-radius: 3px; display: block"><span style="display: block; width: 9%; height: 5px; border-radius: 3px; background: #B08CF0"></span></span><span style="text-align: right; color: #DAD8D0">9%</span></div>
+    </div>
+  </section>
+  <a href="Perfis.dc.html" aria-label="Pedro: contas e perfis das IAs" style="display: flex; align-items: center; gap: 10px; margin-top: 8px; padding: 10px; border-radius: 10px; text-decoration: none; background: transparent">
+    <span style="width: 32px; height: 32px; border-radius: 16px; background: #3A3934; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex: 0 0 auto">P</span>
+    <span style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 14px; font-weight: 500">Pedro</span><span style="font-size: 12px; color: #A3A19A">3 contas de IA conectadas</span></span>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#A3A19A" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"></path><circle cx="15" cy="7" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg>
+  </a>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px 40px; display: flex; flex-direction: column; gap: 22px; height: 1195px">
+  <header style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center">
+    <div style="width: 120px; height: 120px; border-radius: 20px; background: #1F1E1D; border: 1px solid #33322E; display: flex; align-items: center; justify-content: center; flex: 0 0 auto">
+      <svg class="pet work" width="88" height="88" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><rect x="7" y="0" width="3" height="1" fill="#C4D4FB"></rect><rect x="8" y="1" width="1" height="2" fill="#4C6FC4"></rect><rect x="4" y="3" width="8" height="1" fill="#7FA2F7"></rect><rect x="3" y="4" width="10" height="8" fill="#7FA2F7"></rect><rect x="4" y="4" width="2" height="1" fill="#C4D4FB"></rect><rect x="3" y="10" width="10" height="2" fill="#4C6FC4"></rect><rect x="4" y="12" width="8" height="1" fill="#4C6FC4"></rect><g class="eyes"><rect x="5" y="6" width="2" height="2" fill="#16130F"></rect><rect x="9" y="6" width="2" height="2" fill="#16130F"></rect></g><rect x="6" y="9" width="4" height="1" fill="#16130F" fill-opacity="0.55"></rect><rect x="4" y="13" width="2" height="1" fill="#4C6FC4"></rect><rect x="10" y="13" width="2" height="1" fill="#4C6FC4"></rect></svg>
+    </div>
+    <div style="flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 13px; color: #A3A19A"><a href="Main.dc.html" style="color: #A3A19A">Orquestrador</a> / Backend</div>
+      <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+        <h1 style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.01em">Backend</h1>
+        <span style="padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 500; background: rgba(127,162,247,0.16); color: #B5C8FB">Codex</span>
+        <span style="display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; background: rgba(95,196,138,0.14); color: #86DCA9"><span class="live" style="width: 6px; height: 6px; border-radius: 3px; background: #5FC48A"></span>Trabalhando</span>
+      </div>
+      <div style="font-size: 13px; color: #A3A19A; font-family: 'JetBrains Mono', monospace">worktrees/backend · branch backend/sensores</div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px">
+      <button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #3A3934; border-radius: 10px; background: transparent; color: #ECEAE3; font: inherit; cursor: pointer">Pausar</button>
+      <button type="button" style="min-height: 40px; padding: 0 14px; border: 1px solid #3A3934; border-radius: 10px; background: transparent; color: #ECEAE3; font: inherit; cursor: pointer">Abrir terminal</button>
+      <button type="button" style="min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: #ECEAE3; color: #1F1E1D; font: inherit; font-weight: 600; cursor: pointer">Enviar mensagem</button>
+    </div>
+  </header>
+
+  <section aria-label="Fazendo agora" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 20px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center">
+    <div style="flex: 1 1 360px; min-width: 0; display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #A3A19A"><span class="live" style="width: 8px; height: 8px; border-radius: 4px; background: #5FC48A"></span>Fazendo agora · há 1 min</div>
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600">Editando <span style="font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 500">src/api/sensores.ts</span></h2>
+      <p style="margin: 0; color: #C9C7BF; line-height: 1.5">Adicionando os parâmetros from e to na rota GET /api/sensores e validando o período antes de consultar o banco.</p>
+    </div>
+    <div style="flex: 0 1 260px; padding: 12px 14px; border-radius: 12px; background: #22211F; font-size: 13px; line-height: 1.5; color: #C9C7BF"><span style="display: block; font-size: 12px; color: #A3A19A; margin-bottom: 2px">Próximo passo</span>Rodar npm test de novo e avisar o QA se passar.</div>
+  </section>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 22px; align-items: flex-start">
+    <div style="flex: 999 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 22px">
+      <section aria-label="Linha do tempo" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 4px">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Linha do tempo</h2><span style="font-size: 12px; color: #A3A19A">tarefa: API de sensores</span></div>
+        <ol style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
+          <sc-for list="{{timeline}}" as="e" hint-placeholder-count="6">
+            <li style="display: flex; gap: 14px; padding: 10px 0; border-bottom: 1px solid #353430">
+              <span style="width: 44px; flex: 0 0 auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #9B9993; padding-top: 2px">{{e.t}}</span>
+              <span style="width: 78px; flex: 0 0 auto"><span style="display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 500; background: {{e.bg}}; color: {{e.fg}}">{{e.kind}}</span></span>
+              <span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+                <span style="display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap"><span style="font-family: {{e.font}}; font-size: 13px">{{e.title}}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #86DCA9">{{e.p}}</span><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #F2A094">{{e.m}}</span></span>
+                <span style="font-size: 13px; color: #A3A19A; line-height: 1.45">{{e.detail}}</span>
+              </span>
+            </li>
+          </sc-for>
+        </ol>
+      </section>
+
+      <section aria-label="Última alteração" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Última alteração</h2><span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #A3A19A">src/api/sensores.ts · 14:13</span></div>
+        <div style="background: #1C1B1A; border-radius: 10px; padding: 12px 0; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7">
+          <sc-for list="{{diff}}" as="d" hint-placeholder-count="6">
+            <div style="padding: 0 14px; white-space: pre; background: {{d.bg}}; color: {{d.fg}}">{{d.line}}</div>
+          </sc-for>
+        </div>
+      </section>
+    </div>
+
+    <aside style="flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 16px">
+      <section aria-label="Gasto" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Gasto</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div style="padding: 12px; border-radius: 10px; background: #22211F"><div style="font-size: 12px; color: #A3A19A">Nesta tarefa</div><div style="font-size: 22px; font-weight: 600; margin-top: 2px">US$ 0,94</div></div>
+          <div style="padding: 12px; border-radius: 10px; background: #22211F"><div style="font-size: 12px; color: #A3A19A">Hoje</div><div style="font-size: 22px; font-weight: 600; margin-top: 2px">US$ 1,37</div></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <sc-for list="{{tokens}}" as="k" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column; gap: 4px">
+              <div style="display: flex; justify-content: space-between; font-size: 13px"><span style="color: #C9C7BF">{{k.label}}</span><span>{{k.value}}</span></div>
+              <div style="height: 6px; background: #3A3934; border-radius: 3px"><div style="width: {{k.pct}}; height: 6px; border-radius: 3px; background: #7FA2F7"></div></div>
+            </div>
+          </sc-for>
+        </div>
+        <div>
+          <div style="font-size: 12px; color: #A3A19A; margin-bottom: 8px">Gasto por hora hoje</div>
+          <div style="display: flex; align-items: flex-end; gap: 6px; height: 64px">
+            <sc-for list="{{hours}}" as="h" hint-placeholder-count="6">
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 64px; justify-content: flex-end">
+                <div title="{{h.v}}" style="width: 100%; height: {{h.px}}; border-radius: 3px; background: {{h.c}}"></div>
+                <span style="font-size: 11px; color: #9B9993">{{h.h}}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <p style="margin: 0; font-size: 12px; color: #A3A19A; line-height: 1.5">Estimado pelos tokens do Codex e pela tabela de preços do modelo.</p>
+      </section>
+
+      <section aria-label="Arquivos alterados" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; justify-content: space-between; align-items: baseline"><h2 style="margin: 0; font-size: 16px; font-weight: 600">Arquivos alterados</h2><span style="font-size: 12px; color: #A3A19A">3 arquivos</span></div>
+        <sc-for list="{{files}}" as="f" hint-placeholder-count="3">
+          <div style="display: flex; gap: 8px; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 12px">
+            <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #DAD8D0">{{f.path}}</span>
+            <span style="color: #86DCA9">{{f.p}}</span><span style="color: #F2A094">{{f.m}}</span>
+          </div>
+        </sc-for>
+      </section>
+
+      <section aria-label="Mensagens" style="background: #2C2B28; border: 1px solid #3A3934; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 12px">
+        <h2 style="margin: 0; font-size: 16px; font-weight: 600">Mensagens</h2>
+        <sc-for list="{{msgs}}" as="g" hint-placeholder-count="2">
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <div style="display: flex; align-items: center; gap: 6px; font-size: 12px"><span style="width: 8px; height: 8px; background: {{g.color}}"></span><span style="font-weight: 600">{{g.dir}}</span><span style="margin-left: auto; color: #9B9993; font-family: 'JetBrains Mono', monospace">{{g.t}}</span></div>
+            <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #DAD8D0">{{g.text}}</p>
+          </div>
+        </sc-for>
+      </section>
+    </aside>
+  </div>
+
+  <form style="display: flex; gap: 10px; align-items: center; background: #2C2B28; border: 1px solid #3A3934; border-radius: 14px; padding: 8px 8px 8px 16px">
+    <label for="instrucao" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0)">Instrução para o Backend</label>
+    <input id="instrucao" type="text" placeholder="Mandar instrução para o Backend…" style="flex: 1; min-width: 0; min-height: 40px; border: 0; background: transparent; color: #ECEAE3; font: inherit; font-size: 14px; outline: none">
+    <button type="button" style="min-height: 40px; padding: 0 16px; border: 0; border-radius: 10px; background: #ECEAE3; color: #1F1E1D; font: inherit; font-weight: 600; cursor: pointer">Enviar</button>
+  </form>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const fmt = (v) => 'US$ ' + v.toFixed(2).replace('.', ',');
+    const mono = "'JetBrains Mono', monospace";
+    const sans = 'Inter, system-ui, sans-serif';
+    const SB_ST = {
+      work: { label: 'Trabalhando', dot: '#5FC48A', anim: 'work', live: 'live' },
+      think: { label: 'Pensando', dot: '#E8B34B', anim: 'think', live: 'live' },
+      wait: { label: 'Aguardando', dot: '#7FA2F7', anim: 'wait', live: '' },
+      idle: { label: 'Ocioso', dot: '#8A8880', anim: 'idle', live: '' }
+    };
+    const sbFmt = (v) => 'US$ ' + v.toFixed(2).replace('.', ',');
+    const agents = [
+      { name: 'Backend', color: '#7FA2F7', dark: '#4C6FC4', light: '#C4D4FB', ears: 0, antenna: 1, status: 'work', cost: 0.94 },
+      { name: 'Frontend', color: '#B08CF0', dark: '#7C5BC0', light: '#DCCBF9', ears: 1, antenna: 1, status: 'think', cost: 0.41 },
+      { name: 'Arquiteto', color: '#E8915B', dark: '#B4643A', light: '#F6C3A0', ears: 1, antenna: 0, status: 'wait', cost: 1.12 },
+      { name: 'QA', color: '#6CC79A', dark: '#3F9468', light: '#BDEBD3', ears: 0, antenna: 0, status: 'idle', cost: 0.18 }
+    ].map((a) => {
+      const s = SB_ST[a.status];
+      const on = a.name === 'Backend';
+      return Object.assign({}, a, { statusLabel: s.label, dot: s.dot, anim: s.anim, liveClass: s.live, costStr: sbFmt(a.cost), rowBg: on ? '#2F2E2B' : 'transparent', weight: on ? 600 : 400 });
+    });
+    const K = {
+      edit: { kind: 'Editou', bg: 'rgba(95,196,138,0.14)', fg: '#86DCA9' },
+      run: { kind: 'Rodou', bg: 'rgba(232,179,75,0.15)', fg: '#F0C978' },
+      msg: { kind: 'Mensagem', bg: 'rgba(176,140,240,0.17)', fg: '#D3BEF8' },
+      read: { kind: 'Leu', bg: '#3A3934', fg: '#C9C7BF' },
+      task: { kind: 'Tarefa', bg: 'rgba(127,162,247,0.16)', fg: '#B5C8FB' }
+    };
+    const ev = [
+      { t: '14:13', k: 'edit', title: 'src/api/sensores.ts', f: 1, p: '+46', m: '−12', detail: 'Adicionou from/to na rota e a função validarPeriodo.' },
+      { t: '14:11', k: 'msg', title: 'Para o Orquestrador', f: 0, p: '', m: '', detail: 'Dois testes falhando em leituras.spec.ts. Corrijo antes de chamar o QA.' },
+      { t: '14:10', k: 'run', title: 'npm test', f: 1, p: '', m: '', detail: '46 passaram, 2 falharam: datas fora do fuso de Cuiabá.' },
+      { t: '14:08', k: 'edit', title: 'src/db/leituras.sql', f: 1, p: '+18', m: '', detail: 'Criou índice por (sensor_id, lido_em) para consultas por período.' },
+      { t: '14:05', k: 'read', title: 'docs/plano-sensores.md', f: 1, p: '', m: '', detail: 'Leu o contrato da API definido pelo Arquiteto.' },
+      { t: '14:02', k: 'task', title: 'Recebeu do Arquiteto', f: 0, p: '', m: '', detail: 'Implementar GET /api/sensores com filtro por período.' }
+    ];
+    const timeline = ev.map((e) => Object.assign({}, e, K[e.k], { font: e.f ? mono : sans }));
+    const D = {
+      ctx: { bg: 'transparent', fg: '#A3A19A' },
+      add: { bg: 'rgba(95,196,138,0.12)', fg: '#A6E6BF' },
+      del: { bg: 'rgba(242,160,148,0.12)', fg: '#F5B5AB' }
+    };
+    const diff = [
+      ['ctx', "  router.get('/api/sensores', async (req, res) => {"],
+      ['del', "-   const leituras = await db.leituras.todas()"],
+      ['add', "+   const { from, to } = validarPeriodo(req.query)"],
+      ['add', "+   const leituras = await db.leituras.entre(from, to)"],
+      ['ctx', "    res.json(leituras)"],
+      ['ctx', "  })"]
+    ].map((r) => Object.assign({ line: r[1] }, D[r[0]]));
+    const tokens = [
+      { label: 'Entrada', value: '98 mil', pct: '70%' },
+      { label: 'Saída', value: '21 mil', pct: '15%' },
+      { label: 'Cache', value: '22 mil', pct: '16%' }
+    ];
+    const hv = [['9h', 0.05], ['10h', 0.12], ['11h', 0.08], ['12h', 0.0], ['13h', 0.18], ['14h', 0.94]];
+    const hours = hv.map((r, i) => ({ h: r[0], v: fmt(r[1]), px: Math.max(2, Math.round(r[1] / 0.94 * 48)) + 'px', c: i === hv.length - 1 ? '#7FA2F7' : '#4F5A78' }));
+    const files = [
+      { path: 'src/api/sensores.ts', p: '+46', m: '−12' },
+      { path: 'src/db/leituras.sql', p: '+18', m: '' },
+      { path: 'src/lib/validarPeriodo.ts', p: '+22', m: '' }
+    ];
+    const msgs = [
+      { dir: 'Enviada ao Orquestrador', color: '#ECC56A', t: '14:11', text: 'Dois testes falhando em leituras.spec.ts. Corrijo antes de chamar o QA.' },
+      { dir: 'Recebida do Arquiteto', color: '#E8915B', t: '14:02', text: 'Implementa GET /api/sensores com filtro por período. O contrato está em docs/plano-sensores.md.' }
+    ];
+    return { agents, timeline, diff, tokens, hours, files, msgs };
+  }
+}
+</script>
+</body>
+</html>

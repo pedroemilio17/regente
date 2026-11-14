@@ -1,0 +1,13 @@
+{"type":"thread.started","thread_id":"01a1db7c-9cdb-7c73-b397-ca638f18ec5a"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"I’ll perform the four steps in order."}}
+{"type":"item.started","item":{"id":"item_1","type":"command_execution","command":"/bin/bash -lc 'cat notes.txt'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_1","type":"command_execution","command":"/bin/bash -lc 'cat notes.txt'","aggregated_output":"Regente fixture notes\nversion: 1\n","exit_code":0,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_2","type":"file_change","changes":[{"path":"/work/repo/notes.txt","kind":"update"}],"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_2","type":"file_change","changes":[{"path":"/work/repo/notes.txt","kind":"update"}],"status":"completed"}}
+{"type":"item.started","item":{"id":"item_3","type":"command_execution","command":"/bin/bash -lc ls","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_3","type":"command_execution","command":"/bin/bash -lc ls","aggregated_output":"notes.txt\n","exit_code":0,"status":"completed"}}
+{"type":"item.started","item":{"id":"item_4","type":"mcp_tool_call","server":"regente_test","tool":"ping","arguments":{"text":"oi"},"result":null,"error":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"item_4","type":"mcp_tool_call","server":"regente_test","tool":"ping","arguments":{"text":"oi"},"result":{"content":[{"type":"text","text":"pong: oi"}],"structured_content":null},"error":null,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_5","type":"agent_message","text":"ok"}}
+{"type":"turn.completed","usage":{"input_tokens":129686,"cached_input_tokens":115328,"cache_write_input_tokens":0,"output_tokens":233,"reasoning_output_tokens":0}}

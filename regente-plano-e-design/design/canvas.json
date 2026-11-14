@@ -1,0 +1,121 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Agente.dc.html": {
+      "expand": "fill",
+      "h": 1200,
+      "is_interactive": true,
+      "title": "Agente individual — Backend",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Main.dc.html": {
+      "expand": "fill",
+      "h": 1000,
+      "is_interactive": true,
+      "title": "Visão geral do orquestrador",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "Criar.dc.html": {
+      "x": 0,
+      "y": 1600,
+      "w": 760,
+      "h": 560,
+      "title": "Menu Criar",
+      "is_interactive": true
+    },
+    "NovoAgente.dc.html": {
+      "x": 840,
+      "y": 1600,
+      "w": 1440,
+      "h": 1500,
+      "title": "Novo agente",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "NovoProjeto.dc.html": {
+      "x": 2360,
+      "y": 1600,
+      "w": 1440,
+      "h": 1700,
+      "title": "Novo projeto",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Plugins.dc.html": {
+      "x": 0,
+      "y": 3700,
+      "w": 1440,
+      "h": 1000,
+      "title": "Plugins (MCP)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Skills.dc.html": {
+      "x": 1520,
+      "y": 3700,
+      "w": 1440,
+      "h": 1000,
+      "title": "Skills",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Perfis.dc.html": {
+      "x": 3040,
+      "y": 3700,
+      "w": 1440,
+      "h": 1150,
+      "title": "Contas e perfis",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-11-14T17:55:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "titulo": {
+      "kind": "title1",
+      "maxW": 2960,
+      "text": "Regente — MVP da interface de monitoramento",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "criar": {
+      "x": 0,
+      "y": 1300,
+      "text": "Criar: agente e projeto",
+      "kind": "title1",
+      "maxW": 3800
+    },
+    "config": {
+      "x": 0,
+      "y": 3400,
+      "text": "Plugins, skills e contas",
+      "kind": "title1",
+      "maxW": 4480
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Agente.dc.html",
+    "Criar.dc.html",
+    "NovoAgente.dc.html",
+    "NovoProjeto.dc.html",
+    "Plugins.dc.html",
+    "Skills.dc.html",
+    "Perfis.dc.html"
+  ],
+  "pages": [],
+  "title": "Orquestrador de Agentes — MVP"
+}
