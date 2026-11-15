@@ -5,6 +5,7 @@ import type { AgentEvent } from '../api/types';
 import { formatTime } from '../lib/format';
 import { cliInfo, isActive } from '../lib/labels';
 import { useStore } from '../store';
+import { AgentMarkdown } from './Markdown';
 import { Timeline } from './Timeline';
 
 type Item =
@@ -171,7 +172,7 @@ export function Chat({ events, agentName, busy, hasMore, loading, onLoadMore }: 
               <span className="who">
                 {item.side === 'user' ? 'Você' : agentName} · {formatTime(item.ts)}
               </span>
-              <p>{item.text}</p>
+              {item.side === 'user' ? <p>{item.text}</p> : <AgentMarkdown text={item.text} />}
             </div>
           ) : (
             <div key={item.id} className="chat-steps">

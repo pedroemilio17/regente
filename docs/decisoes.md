@@ -143,3 +143,11 @@ Cada entrada: o que foi encontrado, o que foi escolhido e por quê.
 - **Escolhido**: `PATCH /projects/{id}` reaproveita `api::update_project` (as mesmas validações da criação) e o modal `NewProject` em modo edição, aberto por "Configurações do projeto" na topbar. O usuário edita nome, pasta e descrição.
 - **Pasta**: passa pelas mesmas checagens da criação (caminho absoluto, raiz de um repositório Git, arquivos de configuração sem links simbólicos). A branch base e as pastas com permissão atuais precisam continuar válidas no novo repositório. A troca é recusada enquanto houver tarefa que não esteja `done`/`cancelled`, porque os worktrees moram em `<pasta>/.regente/`. Os arquivos do time são gravados de novo na pasta nova; os da pasta antiga ficam como estão.
 - **Orquestrador**: pelo MCP continua sem poder mudar nome ou pasta (`update_project(..., by_user = false)`).
+
+## D26 — Markdown nas mensagens dos agentes
+
+- **Escolhido**: `react-markdown` 10.1.0 com `remark-gfm` 4.0.1, ambos fixados sem `^`, em `ui/`. Renderiza só o texto dos agentes nas bolhas do chat (`ui/src/components/Markdown.tsx`); mensagens do usuário continuam texto puro.
+- **Segurança**: sem `rehype-raw`, então HTML cru do agente não vira elemento (é ignorado ou aparece como texto). Links abrem só para `http:`/`https:`, com `target="_blank"` e `rel="noopener noreferrer"`; outros esquemas e caminhos relativos viram texto. Imagens viram a descrição (`alt`), para o cliente não buscar URLs que o agente escolheu.
+- **Estilo**: classes `.md` em `ui/src/styles.css`, com os tokens existentes (`--raised` no código e nos cabeçalhos de tabela, `--border`, `--info` nos links, fonte `--mono`).
+- **Por quê**: as bibliotecas são pequenas, amplamente usadas e mantêm o parser fora do nosso código, o que cobre tabelas, listas e blocos de código sem reimplementar CommonMark.
+- **Alternativa rejeitada**: parser próprio ou `dangerouslySetInnerHTML`. Um parser próprio exigiria cobrir CommonMark e GFM e manter a sanitização sozinho; `dangerouslySetInnerHTML` sem sanitização expõe o chat a XSS vindo de qualquer saída de agente.
