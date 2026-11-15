@@ -1,5 +1,6 @@
 //! On-demand terminal: a PTY that exists only while the terminal window is
-//! open (`/api/v1/agents/{id}/pty`). The UI never renders terminals by default.
+//! open. `/api/v1/agents/{id}/pty` runs a shell in the agent's worktree and
+//! `/api/v1/accounts/{id}/login` runs the CLI's own login (D21).
 
 use std::io::{Read, Write};
 use std::path::PathBuf;
@@ -13,7 +14,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 
 use crate::app::{App, AppError, AppResult};
-use crate::security;
+use crate::{adapters, security};
 
 pub async fn open(
     ws: WebSocketUpgrade,
@@ -30,18 +31,48 @@ pub async fn open(
         .map(PathBuf::from)
         .filter(|path| path.is_dir())
         .unwrap_or_else(|| PathBuf::from(&project.root));
-    Ok(ws.on_upgrade(move |socket| async move {
-        if let Err(error) = session(socket, cwd).await {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
+    let mut command = CommandBuilder::new(shell);
+    command.cwd(cwd);
+    Ok(upgrade(ws, command))
+}
+
+/// Login terminal of an account: runs the provider's login command, which
+/// opens the browser. The UI checks the status again when it closes.
+pub async fn login(
+    ws: WebSocketUpgrade,
+    State(app): State<Arc<App>>,
+    Path(id): Path<String>,
+) -> AppResult<Response> {
+    let account = app.store.get_account(&id)?;
+    let commands = adapters::auth_commands(&account.provider)
+        .ok_or_else(|| AppError::BadRequest(format!("provedor sem login: {}", account.provider)))?;
+    let program = if account.cli_path.is_empty() {
+        account.provider.clone()
+    } else {
+        account.cli_path.clone()
+    };
+    let mut command = CommandBuilder::new(program);
+    command.args(commands.login);
+    if let Some(home) = std::env::var_os("HOME") {
+        command.cwd(home);
+    }
+    Ok(upgrade(ws, command))
+}
+
+fn upgrade(ws: WebSocketUpgrade, command: CommandBuilder) -> Response {
+    ws.on_upgrade(move |socket| async move {
+        if let Err(error) = session(socket, command).await {
             tracing::warn!(%error, "terminal session ended with error");
         }
-    }))
+    })
 }
 
 fn pty_error<E: std::fmt::Display>(error: E) -> AppError {
     AppError::Other(format!("terminal: {error}"))
 }
 
-async fn session(mut socket: WebSocket, cwd: PathBuf) -> AppResult<()> {
+async fn session(mut socket: WebSocket, mut command: CommandBuilder) -> AppResult<()> {
     let pair = native_pty_system()
         .openpty(PtySize {
             rows: 24,
@@ -50,9 +81,6 @@ async fn session(mut socket: WebSocket, cwd: PathBuf) -> AppResult<()> {
             pixel_height: 0,
         })
         .map_err(pty_error)?;
-    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/sh".to_string());
-    let mut command = CommandBuilder::new(shell);
-    command.cwd(cwd);
     command.env_clear();
     for (name, value) in security::clean_env(std::env::vars(), &[]) {
         command.env(name, value);

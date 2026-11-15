@@ -5,6 +5,7 @@ pub mod agy;
 pub mod claude;
 pub mod codex;
 pub mod fake;
+pub mod models;
 pub mod process;
 
 use std::path::{Path, PathBuf};
@@ -80,6 +81,15 @@ impl TurnCtx {
                 .map(|account| account.default_model.clone())
                 .unwrap_or_default()
         }
+    }
+
+    /// Reasoning level from `agent.settings.effort`, only when it is an allowed value.
+    pub fn effort(&self) -> Option<&'static str> {
+        self.agent
+            .settings
+            .get("effort")
+            .and_then(Value::as_str)
+            .and_then(models::valid_effort)
     }
 
     pub fn program(&self) -> String {
@@ -255,6 +265,76 @@ fn price(app: &App, ctx: &TurnCtx, usage: &mut Usage) {
     }
 }
 
+/// Arguments of each provider's own status and login commands (D21).
+/// `status: None` means the CLI has no reliable status command.
+pub struct AuthCommands {
+    pub status: Option<&'static [&'static str]>,
+    pub login: &'static [&'static str],
+}
+
+pub fn auth_commands(provider: &str) -> Option<AuthCommands> {
+    let (status, login): (Option<&'static [&'static str]>, &'static [&'static str]) = match provider
+    {
+        "claude" => (Some(&["auth", "status"]), &["auth", "login", "--claudeai"]),
+        "codex" => (Some(&["login", "status"]), &["login"]),
+        // agy has no auth subcommand: the interactive CLI asks for sign-in itself.
+        "agy" => (None, &[]),
+        // Tests point `cli_path` at `true` or `false`.
+        "fake" => (Some(&[]), &[]),
+        _ => return None,
+    };
+    Some(AuthCommands { status, login })
+}
+
+/// Run the account's status command with a short timeout:
+/// `{"state": "connected" | "disconnected" | "unknown", "detail"?: string}`.
+pub async fn account_status(account: &Account) -> Value {
+    let unknown = |detail: &str| json!({ "state": "unknown", "detail": detail });
+    if account.login_type == "api_key" {
+        return unknown("Login por chave de API: o status não é verificado.");
+    }
+    let Some(args) = auth_commands(&account.provider).and_then(|commands| commands.status) else {
+        return unknown("Este CLI não informa o status do login.");
+    };
+    let program = if account.cli_path.is_empty() {
+        account.provider.as_str()
+    } else {
+        account.cli_path.as_str()
+    };
+    let mut command = tokio::process::Command::new(program);
+    command
+        .args(args)
+        .env_clear()
+        .envs(crate::security::clean_env(std::env::vars(), &[]))
+        .stdin(std::process::Stdio::null())
+        .kill_on_drop(true);
+    let output =
+        match tokio::time::timeout(std::time::Duration::from_secs(5), command.output()).await {
+            Ok(Ok(output)) => output,
+            Ok(Err(error)) => return unknown(&format!("Não foi possível executar o CLI: {error}")),
+            Err(_) => return unknown("O CLI demorou demais para responder."),
+        };
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    // `claude auth status` prints JSON with `loggedIn`; the others use the exit code.
+    let connected = serde_json::from_str::<Value>(&stdout)
+        .ok()
+        .and_then(|value| value.get("loggedIn").and_then(Value::as_bool))
+        .unwrap_or(output.status.success());
+    let mut status = json!({ "state": if connected { "connected" } else { "disconnected" } });
+    let text = if stdout.trim_start().starts_with('{') {
+        String::new()
+    } else {
+        first_line(
+            &format!("{stdout}\n{}", String::from_utf8_lossy(&output.stderr)),
+            "",
+        )
+    };
+    if !text.is_empty() && crate::security::find_key_pattern(&text).is_none() {
+        status["detail"] = json!(text);
+    }
+    status
+}
+
 /// First non-empty line of a text, shortened.
 pub(crate) fn first_line(text: &str, fallback: &str) -> String {
     text.lines()
@@ -310,6 +390,66 @@ pub(crate) mod testing {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::testing::{agent, app, project};
+
+    #[tokio::test]
+    async fn effort_becomes_a_checked_cli_argument() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = app(dir.path());
+        let project = project(&app, dir.path());
+        let base = agent(&app, &project, "Dev", "basic", false);
+        let task = Task {
+            id: "tk_1".into(),
+            project_id: project.id.clone(),
+            parent_task_id: None,
+            root_task_id: "tk_1".into(),
+            owner_agent_id: base.id.clone(),
+            title: "t".into(),
+            brief: String::new(),
+            done_criteria: String::new(),
+            status: "running".into(),
+            branch: None,
+            budget_usd: None,
+            depends_on: vec![],
+            summary: None,
+            message_count: 0,
+            stalled_rounds: 0,
+            created_at: crate::model::now(),
+            finished_at: None,
+        };
+        let args = |cli: &str, effort: &str| {
+            let mut agent = base.clone();
+            agent.cli = cli.into();
+            agent.settings = json!({ "effort": effort });
+            let ctx = TurnCtx {
+                agent,
+                project: project.clone(),
+                task: task.clone(),
+                account: None,
+                session_id: "s".into(),
+                prompt: "p".into(),
+                cwd: dir.path().to_path_buf(),
+                git: false,
+                resume: None,
+                mcp_url: "http://127.0.0.1:1/mcp/x".into(),
+                turn_index: 0,
+                budget_left: None,
+            };
+            command_for(&ctx).unwrap().args
+        };
+        let has = |args: &[String], pair: [&str; 2]| args.windows(2).any(|w| w == pair);
+        assert!(has(
+            &args("codex", "xhigh"),
+            ["-c", "model_reasoning_effort=xhigh"]
+        ));
+        assert!(!args("agy", "low").iter().any(|a| a == "--effort"));
+        assert!(!args("claude", "ultra").iter().any(|a| a == "--effort"));
+        assert!(has(&args("claude", "max"), ["--effort", "max"]));
+        for cli in ["codex", "claude"] {
+            let bad = args(cli, "high; echo x");
+            assert!(!bad.iter().any(|a| a.contains("effort")), "{cli}: {bad:?}");
+        }
+    }
 
     #[test]
     fn relative_paths_and_clipping() {

@@ -44,25 +44,48 @@ impl Schemas {
         errors: &mut Vec<String>,
     ) {
         if let Some(reference) = schema.get("$ref").and_then(Value::as_str) {
-            if reference == "event.schema.json" {
-                return self.check(&self.event, &self.event, value, path, errors);
-            }
-            let name = reference.trim_start_matches("#/$defs/");
-            return self.check(root, &root["$defs"][name], value, path, errors);
-        }
-        if let Some(options) = schema.get("oneOf").and_then(Value::as_array) {
-            let matches = options
-                .iter()
-                .filter(|option| {
-                    let mut local = Vec::new();
-                    self.check(root, option, value, path, &mut local);
-                    local.is_empty()
-                })
-                .count();
-            if matches != 1 {
-                errors.push(format!("{path}: matched {matches} of the oneOf options"));
+            let (file, fragment) = reference.split_once('#').unwrap_or((reference, ""));
+            let target_root = match file {
+                "" => root,
+                "event.schema.json" => &self.event,
+                "api.schema.json" => &self.api,
+                _ => {
+                    errors.push(format!("{path}: unknown schema reference {reference}"));
+                    return;
+                }
+            };
+            let target = if fragment.is_empty() {
+                Some(target_root)
+            } else {
+                target_root.pointer(fragment)
+            };
+            match target {
+                Some(target) => self.check(target_root, target, value, path, errors),
+                None => errors.push(format!("{path}: unknown schema reference {reference}")),
             }
             return;
+        }
+        for keyword in ["oneOf", "anyOf", "allOf"] {
+            if let Some(options) = schema.get(keyword).and_then(Value::as_array) {
+                let matches = options
+                    .iter()
+                    .filter(|option| {
+                        let mut local = Vec::new();
+                        self.check(root, option, value, path, &mut local);
+                        local.is_empty()
+                    })
+                    .count();
+                let valid = match keyword {
+                    "oneOf" => matches == 1,
+                    "anyOf" => matches > 0,
+                    _ => matches == options.len(),
+                };
+                if !valid {
+                    errors.push(format!(
+                        "{path}: matched {matches} of the {keyword} options"
+                    ));
+                }
+            }
         }
         if let Some(constant) = schema.get("const") {
             if constant != value {
@@ -168,6 +191,27 @@ async fn daemon_output_matches_the_schemas() {
     };
     let home = tempfile::tempdir().unwrap();
     let root = tempfile::tempdir().unwrap();
+    for args in [
+        vec!["init", "-q", "-b", "main"],
+        vec![
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-q",
+            "-m",
+            "init",
+        ],
+    ] {
+        assert!(std::process::Command::new("git")
+            .current_dir(root.path())
+            .args(args)
+            .status()
+            .unwrap()
+            .success());
+    }
     let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("../fixtures");
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let (app, addr) = regente_daemon::start(Config::for_tests(home.path(), &fixtures), listener)
@@ -246,6 +290,14 @@ async fn daemon_output_matches_the_schemas() {
         "ApprovalMessage",
         &json!({ "type": "approval", "approval": snapshot["approvals"][0] }),
     );
+    // agy has no status command, so no CLI runs here.
+    let status = tokio::task::spawn_blocking(move || {
+        call(addr, "GET", "/api/v1/accounts/acc_agy/status", None)
+    })
+    .await
+    .unwrap();
+    assert_eq!(status["state"], "unknown");
+    schemas.assert_api("AccountStatus", &status);
 
     // The validator itself rejects what it should.
     let mut broken = snapshot.clone();
@@ -259,4 +311,49 @@ async fn daemon_output_matches_the_schemas() {
         &mut errors,
     );
     assert_eq!(errors.len(), 1, "{errors:?}");
+    let mut missing_live = snapshot.clone();
+    missing_live["agents"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("live");
+    let mut errors = Vec::new();
+    schemas.check(
+        &schemas.api,
+        &schemas.api["$defs"]["Snapshot"],
+        &missing_live,
+        "Snapshot",
+        &mut errors,
+    );
+    assert!(
+        errors.iter().any(|error| error.contains("missing live")),
+        "{errors:?}"
+    );
+
+    let mut errors = Vec::new();
+    schemas.check(
+        &schemas.api,
+        &json!({"$ref": "event.schema.json#/$defs/EventKind"}),
+        &json!("invalid"),
+        "kind",
+        &mut errors,
+    );
+    assert!(!errors.is_empty());
+    let mut errors = Vec::new();
+    schemas.check(
+        &schemas.api,
+        &json!({"anyOf": [{"type": "string"}, {"type": "null"}]}),
+        &json!(42),
+        "value",
+        &mut errors,
+    );
+    assert!(!errors.is_empty());
+    let mut errors = Vec::new();
+    schemas.check(
+        &schemas.api,
+        &json!({"allOf": [{"type": "string"}, {"const": "ok"}]}),
+        &json!("wrong"),
+        "value",
+        &mut errors,
+    );
+    assert!(!errors.is_empty());
 }

@@ -6,7 +6,7 @@ use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{json, Value};
 
 use super::{clip, first_line, CommandSpec, LineParser, Parsed, TurnCtx};
-use crate::model::{truncate, EventKind, NewEvent, Usage};
+use crate::model::{full_text, truncate, EventKind, NewEvent, Usage};
 use crate::security;
 
 pub struct ClaudeParser {
@@ -225,7 +225,8 @@ impl LineParser for ClaudeParser {
                             let text = block.get("text").and_then(Value::as_str).unwrap_or("");
                             if !text.trim().is_empty() {
                                 out.push(Parsed::Event(
-                                    self.event(EventKind::Thinking, truncate(text, 200)),
+                                    self.event(EventKind::Thinking, truncate(text, 200))
+                                        .with("text", json!(full_text(text))),
                                 ));
                             }
                         }
@@ -322,6 +323,10 @@ pub fn command(ctx: &TurnCtx) -> CommandSpec {
     let model = ctx.model();
     if !model.is_empty() {
         args.extend(["--model".to_string(), model]);
+    }
+    // `claude --help` (2.1.x) lists `--effort <level>`: low, medium, high, xhigh, max.
+    if let Some(effort) = ctx.effort().filter(|level| *level != "ultra") {
+        args.extend(["--effort".to_string(), effort.to_string()]);
     }
     if let Some(left) = ctx.budget_left.filter(|left| *left > 0.0) {
         args.extend(["--max-budget-usd".to_string(), format!("{left:.2}")]);

@@ -32,6 +32,13 @@ sha2 = "0.11"
 uuid = { version = "1", features = ["v4"] }
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
 
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.28", features = ["process", "signal"] }
+
+# Folder picker through xdg-desktop-portal: libdbus is loaded at run time, no GTK (D22).
+[target.'cfg(target_os = "linux")'.dependencies]
+rfd = { version = "0.18", default-features = false, features = ["xdg-portal"] }
+
 [dev-dependencies]
 tokio-tungstenite = "0.30"
 futures-util = "0.3"

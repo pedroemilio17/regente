@@ -1,13 +1,16 @@
 //! REST and WebSocket API (`/api/v1`), the messenger endpoint and the static UI.
 
+mod folder_picker;
 mod pty;
 
 use std::path::{Component, Path as FsPath, PathBuf};
 use std::sync::Arc;
 
+use axum::body::Body;
 use axum::extract::ws::{Message as WsMessage, WebSocket, WebSocketUpgrade};
 use axum::extract::{Path, Query, State};
-use axum::http::{header, StatusCode, Uri};
+use axum::http::{header, Request, StatusCode, Uri};
+use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -39,6 +42,8 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/snapshot", get(snapshot))
         .route("/stream", get(stream))
         .route("/projects", get(list_projects).post(create_project))
+        .route("/projects/{id}", axum::routing::patch(patch_project))
+        .route("/pick-folder", post(folder_picker::pick_folder))
         .route("/agents", get(list_agents).post(create_agent))
         .route("/agents/{id}", get(get_agent).patch(patch_agent))
         .route("/agents/{id}/pause", post(pause_agent))
@@ -52,13 +57,65 @@ pub fn router(app: Arc<App>) -> Router {
         .route("/usage", get(get_usage))
         .route("/accounts", get(list_accounts))
         .route("/accounts/{id}", axum::routing::patch(patch_account))
+        .route("/accounts/{id}/status", get(account_status))
+        .route("/accounts/{id}/models", get(account_models))
+        .route("/accounts/{id}/login", get(pty::login))
         .route("/approvals", get(list_approvals).post(create_approval))
         .route("/approvals/{id}", get(get_approval).post(decide_approval));
     Router::new()
         .nest("/api/v1", api)
         .route("/mcp/{agent_id}", post(mcp_rpc))
         .fallback(static_ui)
+        .layer(middleware::from_fn(loopback_guard))
         .with_state(app)
+}
+
+/// Browsers can send forms and WebSocket upgrades to localhost without CORS.
+/// Reject untrusted origins and DNS-rebinding Host headers before any route.
+async fn loopback_guard(request: Request<Body>, next: Next) -> Response {
+    let headers = request.headers();
+    let hosts: Vec<_> = headers.get_all(header::HOST).iter().collect();
+    let origins: Vec<_> = headers.get_all(header::ORIGIN).iter().collect();
+    let valid_host = hosts.len() <= 1
+        && hosts
+            .first()
+            .is_none_or(|value| value.to_str().ok().is_some_and(loopback_authority));
+    let valid_origin = origins.len() <= 1
+        && origins
+            .first()
+            .is_none_or(|value| value.to_str().ok().is_some_and(loopback_origin));
+    if !valid_host || !valid_origin {
+        return StatusCode::FORBIDDEN.into_response();
+    }
+    next.run(request).await
+}
+
+fn loopback_authority(value: &str) -> bool {
+    let host_end = if value.starts_with('[') {
+        match value.find(']') {
+            Some(end) => end + 1,
+            None => return false,
+        }
+    } else {
+        value.find(':').unwrap_or(value.len())
+    };
+    let (host, suffix) = value.split_at(host_end);
+    let valid_host =
+        host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1" || host == "[::1]";
+    let valid_port = suffix.is_empty()
+        || suffix.strip_prefix(':').is_some_and(|port| {
+            !port.is_empty()
+                && port.bytes().all(|b| b.is_ascii_digit())
+                && port.parse::<u16>().is_ok_and(|p| p != 0)
+        });
+    valid_host && valid_port
+}
+
+fn loopback_origin(value: &str) -> bool {
+    value
+        .strip_prefix("http://")
+        .or_else(|| value.strip_prefix("https://"))
+        .is_some_and(loopback_authority)
 }
 
 async fn health() -> Json<Value> {
@@ -136,18 +193,36 @@ struct NewProject {
 
 async fn create_project(
     State(app): Shared,
-    Json(body): Json<NewProject>,
+    Json(mut body): Json<NewProject>,
 ) -> AppResult<(StatusCode, Json<Value>)> {
     if body.name.trim().is_empty() || body.root.trim().is_empty() {
         return Err(AppError::BadRequest(
             "nome e pasta do projeto são obrigatórios".into(),
         ));
     }
-    let root = PathBuf::from(body.root.trim());
-    if !root.is_absolute() {
-        return Err(AppError::BadRequest(
-            "a pasta do projeto precisa ser um caminho absoluto".into(),
-        ));
+    let root = check_root(&body.root).await?;
+    // No base branch given: use the branch checked out in the repository.
+    let base = match body.base_branch.as_deref().map(str::trim) {
+        Some(base) if !base.is_empty() => base.to_string(),
+        _ => crate::worktree::git(&root, &["rev-parse", "--abbrev-ref", "HEAD"])
+            .await
+            .map_err(|_| AppError::BadRequest("branch base não encontrada".into()))?,
+    };
+    check_base_branch(&root, &base).await?;
+    let folders = body.folders.unwrap_or_else(|| json!([]));
+    check_folders(&root, &folders)?;
+    let mut names: Vec<String> = Vec::new();
+    for agent in &mut body.agents {
+        let name = agent_name(agent, &names);
+        if !CLIS.contains(&agent.cli.as_str())
+            || names.iter().any(|taken| taken.eq_ignore_ascii_case(&name))
+        {
+            return Err(AppError::BadRequest(
+                "nome ou CLI inválido, ou agente duplicado".into(),
+            ));
+        }
+        agent.name = Some(name.clone());
+        names.push(name);
     }
     let blocked = body.blocked.unwrap_or_else(|| {
         security::DEFAULT_BLOCKED
@@ -159,26 +234,217 @@ async fn create_project(
         id: new_id("pr"),
         name: body.name.trim().to_string(),
         root: root.to_string_lossy().into_owned(),
-        base_branch: body
-            .base_branch
-            .filter(|b| !b.trim().is_empty())
-            .unwrap_or_else(|| "main".into()),
+        base_branch: base,
         context: body.context.unwrap_or_default(),
-        folders: body.folders.unwrap_or_else(|| json!([])),
+        folders,
         blocked: json!(blocked),
         day_budget_usd: body.day_budget_usd,
         created_at: now(),
     };
-    app.store.insert_project(&project)?;
     let mut agents = Vec::new();
     for new_agent in body.agents {
-        agents.push(insert_agent(&app, &project.id, new_agent)?);
+        agents.push(make_agent(&app, &project.id, new_agent));
     }
-    let files = team::write_team_files(&app, &project).await?;
+    let paths = [
+        ".regente/team.yaml",
+        ".regente/.gitignore",
+        "CLAUDE.md",
+        "AGENTS.md",
+    ];
+    let mut backups = Vec::new();
+    for path in paths {
+        let target = root.join(path);
+        let content = match std::fs::read(&target) {
+            Ok(bytes) => Some(bytes),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+            Err(error) => return Err(error.into()),
+        };
+        backups.push((target, content));
+    }
+    let result = async {
+        let files = team::write_files(&project, &agents).await?;
+        app.store.insert_project_team(&project, &agents)?;
+        Ok::<_, AppError>(files)
+    }
+    .await;
+    let files = match result {
+        Ok(files) => files,
+        Err(error) => {
+            for (path, content) in backups {
+                match content {
+                    Some(bytes) => std::fs::write(&path, bytes)?,
+                    None if path.exists() => std::fs::remove_file(&path)?,
+                    None => {}
+                }
+            }
+            return Err(error);
+        }
+    };
     Ok((
         StatusCode::CREATED,
         Json(json!({ "project": project, "agents": agents, "files": files })),
     ))
+}
+
+/// A project folder is the absolute root of a Git repository whose config
+/// files are not symlinks.
+async fn check_root(raw: &str) -> AppResult<PathBuf> {
+    let root = PathBuf::from(raw.trim());
+    if !root.is_absolute() {
+        return Err(AppError::BadRequest(
+            "a pasta do projeto precisa ser um caminho absoluto".into(),
+        ));
+    }
+    if !crate::worktree::is_git_repo(&root).await {
+        return Err(AppError::BadRequest(
+            "a pasta precisa ser um repositório Git existente".into(),
+        ));
+    }
+    let actual_root = crate::worktree::git(&root, &["rev-parse", "--show-toplevel"]).await?;
+    if std::fs::canonicalize(&root)? != std::fs::canonicalize(actual_root)? {
+        return Err(AppError::BadRequest(
+            "informe a raiz do repositório Git".into(),
+        ));
+    }
+    for path in [
+        ".regente",
+        ".regente/team.yaml",
+        ".regente/.gitignore",
+        "CLAUDE.md",
+        "AGENTS.md",
+    ] {
+        if !security::safe_relative_path(&root, path) {
+            return Err(AppError::BadRequest(
+                "arquivos de configuração não podem usar links simbólicos".into(),
+            ));
+        }
+    }
+    Ok(root)
+}
+
+/// The base branch must exist in the repository (D15).
+async fn check_base_branch(root: &FsPath, base: &str) -> AppResult<()> {
+    let reference = format!("refs/heads/{base}^{{commit}}");
+    if base.starts_with('-')
+        || crate::worktree::git(root, &["rev-parse", "--verify", &reference])
+            .await
+            .is_err()
+    {
+        return Err(AppError::BadRequest("branch base não encontrada".into()));
+    }
+    Ok(())
+}
+
+fn check_folders(root: &FsPath, folders: &Value) -> AppResult<()> {
+    let Some(folder_list) = folders.as_array() else {
+        return Err(AppError::BadRequest("pastas inválidas".into()));
+    };
+    for folder in folder_list {
+        let path = folder.get("path").and_then(Value::as_str).unwrap_or("");
+        let access = folder.get("access").and_then(Value::as_str).unwrap_or("");
+        if !security::safe_relative_path(root, path) || !["read", "write", "none"].contains(&access)
+        {
+            return Err(AppError::BadRequest(
+                "pasta ou nível de acesso inválido".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+async fn patch_project(
+    State(app): Shared,
+    Path(id): Path<String>,
+    Json(patch): Json<Value>,
+) -> AppResult<Json<Project>> {
+    Ok(Json(update_project(&app, &id, &patch, true).await?))
+}
+
+/// Change the editable settings of a project with the same checks as its
+/// creation, then regenerate the team files. Name and folder are the user's
+/// call only (`by_user`), never the orchestrator's.
+pub(crate) async fn update_project(
+    app: &App,
+    id: &str,
+    patch: &Value,
+    by_user: bool,
+) -> AppResult<Project> {
+    let mut project = app.store.get_project(id)?;
+    let mut root = PathBuf::from(&project.root);
+    if !by_user && (patch.get("name").is_some() || patch.get("root").is_some()) {
+        return Err(AppError::BadRequest(
+            "nome e pasta do projeto só podem ser alterados pelo usuário".into(),
+        ));
+    }
+    if let Some(name) = patch.get("name") {
+        let name = name.as_str().map(str::trim).unwrap_or("");
+        if name.is_empty() {
+            return Err(AppError::BadRequest("nome do projeto é obrigatório".into()));
+        }
+        project.name = name.to_string();
+    }
+    if let Some(new_root) = patch.get("root") {
+        let new_root = check_root(new_root.as_str().unwrap_or("")).await?;
+        if new_root != root {
+            // Worktrees live inside the project folder: never move it under running work.
+            let active = app
+                .store
+                .list_tasks(Some(id))?
+                .into_iter()
+                .any(|task| !matches!(task.status.as_str(), "done" | "cancelled"));
+            if active {
+                return Err(AppError::BadRequest(
+                    "conclua ou cancele as tarefas ativas antes de trocar a pasta".into(),
+                ));
+            }
+            // What the patch does not change must still hold in the new repository.
+            if patch.get("base_branch").is_none() {
+                check_base_branch(&new_root, &project.base_branch).await?;
+            }
+            if patch.get("folders").is_none() {
+                check_folders(&new_root, &project.folders)?;
+            }
+            root = new_root;
+            project.root = root.to_string_lossy().into_owned();
+        }
+    }
+    if let Some(base) = patch.get("base_branch") {
+        let base = base
+            .as_str()
+            .map(str::trim)
+            .ok_or_else(|| AppError::BadRequest("branch base inválida".into()))?;
+        check_base_branch(&root, base).await?;
+        project.base_branch = base.to_string();
+    }
+    if let Some(context) = patch.get("context") {
+        project.context = context
+            .as_str()
+            .ok_or_else(|| AppError::BadRequest("contexto inválido".into()))?
+            .to_string();
+    }
+    if let Some(folders) = patch.get("folders") {
+        check_folders(&root, folders)?;
+        project.folders = folders.clone();
+    }
+    if let Some(blocked) = patch.get("blocked") {
+        if !blocked
+            .as_array()
+            .is_some_and(|list| list.iter().all(Value::is_string))
+        {
+            return Err(AppError::BadRequest("bloqueios inválidos".into()));
+        }
+        project.blocked = blocked.clone();
+    }
+    if let Some(budget) = patch.get("day_budget_usd") {
+        if !budget.is_null() && !budget.as_f64().is_some_and(|value| value >= 0.0) {
+            return Err(AppError::BadRequest("orçamento inválido".into()));
+        }
+        project.day_budget_usd = budget.as_f64();
+    }
+    app.store.update_project(&project)?;
+    team::write_team_files(app, &project).await?;
+    app.broadcast(&app.snapshot()?);
+    Ok(project)
 }
 
 // ---- agents -----------------------------------------------------------------
@@ -214,29 +480,52 @@ async fn get_agent(State(app): Shared, Path(id): Path<String>) -> AppResult<Json
     Ok(Json(agent_view(&app, &app.store.get_agent(&id)?)))
 }
 
-#[derive(Deserialize)]
-struct NewAgent {
-    project_id: Option<String>,
-    name: String,
-    cli: String,
-    role: Option<String>,
+#[derive(Deserialize, Default)]
+pub(crate) struct NewAgent {
+    pub project_id: Option<String>,
+    pub name: Option<String>,
+    pub cli: String,
+    pub role: Option<String>,
     #[serde(default)]
-    is_orchestrator: bool,
-    parent_id: Option<String>,
-    account_id: Option<String>,
-    model: Option<String>,
-    pet: Option<Value>,
-    permissions: Option<Value>,
-    settings: Option<Value>,
-    budget_usd: Option<f64>,
+    pub is_orchestrator: bool,
+    pub parent_id: Option<String>,
+    pub account_id: Option<String>,
+    pub model: Option<String>,
+    pub pet: Option<Value>,
+    pub permissions: Option<Value>,
+    pub settings: Option<Value>,
+    pub budget_usd: Option<f64>,
 }
 
 const CLIS: [&str; 4] = ["claude", "codex", "agy", "fake"];
 
-fn insert_agent(app: &App, project_id: &str, body: NewAgent) -> AppResult<Agent> {
-    if body.name.trim().is_empty() {
-        return Err(AppError::BadRequest("o agente precisa de um nome".into()));
+/// The given name, or the engine label with a suffix free in the project
+/// ("Claude", "Claude 2", ...).
+fn agent_name(body: &NewAgent, taken: &[String]) -> String {
+    if let Some(name) = body
+        .name
+        .as_deref()
+        .map(str::trim)
+        .filter(|n| !n.is_empty())
+    {
+        return name.to_string();
     }
+    let label = match body.cli.as_str() {
+        "claude" => "Claude",
+        "codex" => "Codex",
+        "agy" => "Antigravity",
+        _ => "Teste",
+    };
+    (1..)
+        .map(|n| match n {
+            1 => label.to_string(),
+            n => format!("{label} {n}"),
+        })
+        .find(|name| !taken.iter().any(|t| t.eq_ignore_ascii_case(name)))
+        .unwrap_or_default()
+}
+
+fn insert_agent(app: &App, project_id: &str, mut body: NewAgent) -> AppResult<Agent> {
     if !CLIS.contains(&body.cli.as_str()) {
         return Err(AppError::BadRequest(format!(
             "CLI desconhecido: {}",
@@ -245,15 +534,26 @@ fn insert_agent(app: &App, project_id: &str, body: NewAgent) -> AppResult<Agent>
     }
     app.store.get_project(project_id)?;
     let existing = app.store.list_agents(Some(project_id))?;
-    if existing
-        .iter()
-        .any(|agent| agent.name.eq_ignore_ascii_case(body.name.trim()))
-    {
+    if body.parent_id.is_none() && !body.is_orchestrator {
+        body.parent_id = existing
+            .iter()
+            .find(|agent| agent.is_orchestrator && agent.parent_id.is_none())
+            .map(|agent| agent.id.clone());
+    }
+    let taken: Vec<String> = existing.into_iter().map(|agent| agent.name).collect();
+    let name = agent_name(&body, &taken);
+    if taken.iter().any(|t| t.eq_ignore_ascii_case(&name)) {
         return Err(AppError::BadRequest(format!(
-            "já existe um agente chamado {}",
-            body.name.trim()
+            "já existe um agente chamado {name}"
         )));
     }
+    body.name = Some(name);
+    let agent = make_agent(app, project_id, body);
+    app.store.insert_agent(&agent)?;
+    Ok(agent)
+}
+
+fn make_agent(app: &App, project_id: &str, body: NewAgent) -> Agent {
     let default_account = format!("acc_{}", body.cli);
     let account_id = body.account_id.or_else(|| {
         app.store
@@ -261,12 +561,23 @@ fn insert_agent(app: &App, project_id: &str, body: NewAgent) -> AppResult<Agent>
             .ok()
             .map(|account| account.id)
     });
-    let agent = Agent {
+    let role = body
+        .role
+        .filter(|role| !role.trim().is_empty())
+        .unwrap_or_else(|| {
+            if body.is_orchestrator {
+                "Orquestrador"
+            } else {
+                "Agente"
+            }
+            .into()
+        });
+    Agent {
         id: new_id("ag"),
         project_id: project_id.to_string(),
-        name: body.name.trim().to_string(),
+        name: body.name.unwrap_or_default().trim().to_string(),
         cli: body.cli,
-        role: body.role.unwrap_or_default(),
+        role,
         is_orchestrator: body.is_orchestrator,
         parent_id: body.parent_id,
         account_id,
@@ -278,8 +589,15 @@ fn insert_agent(app: &App, project_id: &str, body: NewAgent) -> AppResult<Agent>
         paused: false,
         pause_reason: None,
         created_at: now(),
-    };
-    app.store.insert_agent(&agent)?;
+    }
+}
+
+/// Create an agent and regenerate the project's team files.
+pub(crate) async fn add_agent(app: &App, project_id: &str, body: NewAgent) -> AppResult<Agent> {
+    let agent = insert_agent(app, project_id, body)?;
+    let project = app.store.get_project(project_id)?;
+    team::write_team_files(app, &project).await?;
+    app.broadcast(&app.snapshot()?);
     Ok(agent)
 }
 
@@ -291,19 +609,13 @@ async fn create_agent(
         .project_id
         .clone()
         .ok_or_else(|| AppError::BadRequest("project_id é obrigatório".into()))?;
-    let agent = insert_agent(&app, &project_id, body)?;
-    let project = app.store.get_project(&project_id)?;
-    team::write_team_files(&app, &project).await?;
-    app.broadcast(&app.snapshot()?);
+    let agent = add_agent(&app, &project_id, body).await?;
     Ok((StatusCode::CREATED, Json(agent_view(&app, &agent))))
 }
 
-async fn patch_agent(
-    State(app): Shared,
-    Path(id): Path<String>,
-    Json(patch): Json<Value>,
-) -> AppResult<Json<Value>> {
-    let current = app.store.get_agent(&id)?;
+/// Apply a partial change to an agent and regenerate the team files.
+pub(crate) async fn update_agent(app: &App, id: &str, patch: Value) -> AppResult<Agent> {
+    let current = app.store.get_agent(id)?;
     let mut value = serde_json::to_value(&current).unwrap_or(Value::Null);
     let (Value::Object(target), Value::Object(changes)) = (&mut value, patch) else {
         return Err(AppError::BadRequest(
@@ -331,11 +643,32 @@ async fn patch_agent(
             updated.cli
         )));
     }
+    if updated.name.trim().is_empty()
+        || app
+            .store
+            .list_agents(Some(&updated.project_id))?
+            .iter()
+            .any(|other| other.id != updated.id && other.name.eq_ignore_ascii_case(&updated.name))
+    {
+        return Err(AppError::BadRequest(format!(
+            "nome inválido ou já usado: {}",
+            updated.name
+        )));
+    }
     app.store.update_agent(&updated)?;
     let project = app.store.get_project(&updated.project_id)?;
-    team::write_team_files(&app, &project).await?;
+    team::write_team_files(app, &project).await?;
     app.broadcast(&app.snapshot()?);
-    Ok(Json(agent_view(&app, &app.store.get_agent(&id)?)))
+    app.store.get_agent(id).map_err(Into::into)
+}
+
+async fn patch_agent(
+    State(app): Shared,
+    Path(id): Path<String>,
+    Json(patch): Json<Value>,
+) -> AppResult<Json<Value>> {
+    let agent = update_agent(&app, &id, patch).await?;
+    Ok(Json(agent_view(&app, &agent)))
 }
 
 #[derive(Deserialize, Default)]
@@ -500,6 +833,16 @@ async fn list_accounts(State(app): Shared) -> AppResult<Json<Value>> {
     Ok(Json(json!(app.store.list_accounts()?)))
 }
 
+async fn account_status(State(app): Shared, Path(id): Path<String>) -> AppResult<Json<Value>> {
+    let account = app.store.get_account(&id)?;
+    Ok(Json(crate::adapters::account_status(&account).await))
+}
+
+async fn account_models(State(app): Shared, Path(id): Path<String>) -> AppResult<Json<Value>> {
+    let account = app.store.get_account(&id)?;
+    Ok(Json(crate::adapters::models::models_for(&account).await))
+}
+
 async fn patch_account(
     State(app): Shared,
     Path(id): Path<String>,
@@ -610,7 +953,7 @@ async fn mcp_rpc(
     Path(agent_id): Path<String>,
     Json(request): Json<Value>,
 ) -> Response {
-    match mcp::handle_rpc(&app, &agent_id, &request) {
+    match mcp::handle_rpc(&app, &agent_id, &request).await {
         Some(reply) => Json(reply).into_response(),
         None => StatusCode::ACCEPTED.into_response(),
     }

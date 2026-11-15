@@ -195,6 +195,26 @@ pub fn block_tree(app: &App, root_task_id: &str) -> AppResult<()> {
     Ok(())
 }
 
+fn block_waiting_parents(app: &App, task: &Task) -> AppResult<()> {
+    let mut parent_id = task.parent_task_id.clone();
+    while let Some(id) = parent_id {
+        let parent = app.store.get_task(&id)?;
+        if parent.status == "waiting" || parent.status == "queued" {
+            app.store.set_task_status(&id, "blocked")?;
+            app.emit(
+                NewEvent::new(
+                    &parent.owner_agent_id,
+                    EventKind::Error,
+                    "Uma etapa foi bloqueada ou cancelada",
+                )
+                .task(Some(&id)),
+            )?;
+        }
+        parent_id = parent.parent_task_id;
+    }
+    Ok(())
+}
+
 /// A task finished: wake whoever delegated it once every step has reported.
 pub fn on_task_done(app: &App, task: &Task) -> AppResult<()> {
     if let Some(parent_id) = &task.parent_task_id {
@@ -215,12 +235,41 @@ pub fn on_task_done(app: &App, task: &Task) -> AppResult<()> {
 pub fn tick(app: &Arc<App>) -> AppResult<usize> {
     let mut started = 0;
     for task in app.store.tasks_with_status("queued")? {
-        let deps_done = task.depends_on.iter().all(|dep| {
-            app.store
-                .get_task(dep)
-                .map(|dep| is_closed(&dep))
-                .unwrap_or(true)
-        });
+        if app.store.get_task(&task.id)?.status != "queued" {
+            continue;
+        }
+        let mut deps_done = true;
+        let mut failed_dependency = None;
+        for dep in &task.depends_on {
+            match app.store.get_task(dep) {
+                Ok(dependency) if dependency.status == "done" => {}
+                Ok(dependency)
+                    if dependency.status == "blocked" || dependency.status == "cancelled" =>
+                {
+                    failed_dependency = Some(dep.clone());
+                    break;
+                }
+                Ok(_) => deps_done = false,
+                Err(crate::store::StoreError::NotFound(_)) => {
+                    failed_dependency = Some(dep.clone());
+                    break;
+                }
+                Err(error) => return Err(error.into()),
+            }
+        }
+        if let Some(dep) = failed_dependency {
+            app.store.set_task_status(&task.id, "blocked")?;
+            app.emit(
+                NewEvent::new(
+                    &task.owner_agent_id,
+                    EventKind::Error,
+                    format!("Dependência {dep} bloqueada, cancelada ou ausente"),
+                )
+                .task(Some(&task.id)),
+            )?;
+            block_waiting_parents(app, &task)?;
+            continue;
+        }
         if !deps_done {
             continue;
         }
@@ -397,6 +446,11 @@ async fn run_turn(
 ) -> AppResult<()> {
     let project = app.store.get_project(&task.project_id)?;
     let root = PathBuf::from(&project.root);
+    if agent.cli != "fake" && security::has_restricted_folders(&project.folders) {
+        return Err(AppError::Forbidden("Este projeto tem pastas com acesso restrito; a execução com CLIs reais ainda não está disponível para essa configuração.".into()));
+    }
+    // An intent belongs to one turn only; retries must report completion again.
+    app.store.clear_task_summary(&task.id)?;
     let previous = app.store.sessions_of(&agent.id, &task.id)?;
     let turn_index = previous.len();
     let resume = previous
@@ -491,8 +545,24 @@ async fn run_turn(
     if git {
         // Last look before the checkpoint: a leak blocks the commit.
         let mut leaked = false;
-        let changed = worktree::changed_files(&cwd).await.unwrap_or_default();
+        let changed = worktree::changed_files(&cwd).await?;
         for file in &changed {
+            if !security::safe_relative_path(&cwd, file)
+                || security::folder_denied(&project.folders, file, true)
+            {
+                app.emit(
+                    NewEvent::new(
+                        &agent.id,
+                        EventKind::SecurityAlert,
+                        format!("Alteração em pasta restrita: {file}"),
+                    )
+                    .task(Some(&task.id))
+                    .target(file.clone()),
+                )?;
+                app.pause_agent(&agent.id, "Alteração em pasta restrita")?;
+                leaked = true;
+                continue;
+            }
             leaked |= watcher::check_written_file(
                 app,
                 &agent.id,
@@ -591,6 +661,21 @@ async fn after_turn(
         app.emit(NewEvent::status(&agent.id, "idle", "Turno cancelado").task(Some(&task.id)))?;
         return Ok(());
     }
+    if children
+        .iter()
+        .any(|child| child.status == "blocked" || child.status == "cancelled")
+    {
+        app.store.set_task_status(&task.id, "blocked")?;
+        app.emit(
+            NewEvent::new(
+                &agent.id,
+                EventKind::Error,
+                "Uma etapa foi bloqueada ou cancelada; a tarefa não pode ser concluída",
+            )
+            .task(Some(&task.id)),
+        )?;
+        return Ok(());
+    }
 
     let edited = turn_events
         .iter()
@@ -602,7 +687,8 @@ async fn after_turn(
     let open_children = children.iter().filter(|child| !is_closed(child)).count();
     let has_inbox = !app.store.pending_messages(&agent.id)?.is_empty();
     let is_reply = fresh.done_criteria == REPLY_CRITERIA;
-    let will_close = open_children == 0 && !has_inbox && (!sent || is_reply);
+    let reported = fresh.summary.is_some();
+    let will_close = open_children == 0 && (reported || (!has_inbox && (!sent || is_reply)));
 
     if !will_close {
         // Rounds without a changed file or a new step count towards the stall limit.
@@ -632,17 +718,19 @@ async fn after_turn(
             )
             .task(Some(&task.id)),
         )?;
-    } else if has_inbox {
+    } else if has_inbox && !reported {
         app.store.set_task_status(&task.id, "queued")?;
-    } else if sent && !is_reply {
+    } else if sent && !is_reply && !reported {
         app.store.set_task_status(&task.id, "waiting")?;
         app.emit(
             NewEvent::status(&agent.id, "waiting", "Aguardando resposta").task(Some(&task.id)),
         )?;
     } else {
         // The CLI ended its turn without calling report_done: close with its last answer.
-        let summary = outcome
-            .done
+        let summary = fresh
+            .summary
+            .clone()
+            .or(outcome.done)
             .filter(|text| !text.trim().is_empty())
             .unwrap_or_else(|| "Concluído".to_string());
         app.store
@@ -650,9 +738,11 @@ async fn after_turn(
         app.store.set_task_status(&task.id, "done")?;
         app.emit(
             NewEvent::new(&agent.id, EventKind::TaskDone, truncate(&summary, 300))
+                .with("text", json!(crate::model::full_text(&summary)))
                 .task(Some(&task.id))
                 .target(task.title.clone()),
         )?;
+        app.emit(NewEvent::status(&agent.id, "idle", "Tarefa concluída").task(Some(&task.id)))?;
         let closed = app.store.get_task(&task.id)?;
         return finish_task(app, &closed, agent).await;
     }
@@ -660,6 +750,28 @@ async fn after_turn(
 }
 
 async fn finish_task(app: &Arc<App>, task: &Task, agent: &Agent) -> AppResult<()> {
+    // Reply-only tasks can accumulate during a conversation. Release their
+    // empty worktrees so they do not exhaust the project's worktree limit.
+    if task.done_criteria == REPLY_CRITERIA {
+        if let Some(branch) = &task.branch {
+            let project = app.store.get_project(&task.project_id)?;
+            let root = PathBuf::from(&project.root);
+            let path = worktree_path(&root, &agent.name, &task.id);
+            let count = worktree::git(
+                &root,
+                &[
+                    "rev-list",
+                    "--count",
+                    &format!("{}..{branch}", project.base_branch),
+                ],
+            )
+            .await;
+            let clean = worktree::git(&path, &["status", "--porcelain"]).await;
+            if count.is_ok_and(|value| value == "0") && clean.is_ok_and(|value| value.is_empty()) {
+                worktree::remove(&root, &path, branch).await?;
+            }
+        }
+    }
     serve_inbox(app, &agent.id, task)?;
     on_task_done(app, task)?;
     if task.parent_task_id.is_some() {
@@ -773,6 +885,70 @@ pub fn needs_approval(command: &str) -> Option<&'static str> {
 mod tests {
     use super::*;
     use crate::app::testing::{agent, app, project};
+
+    #[tokio::test]
+    async fn failed_or_missing_dependencies_block_queued_tasks() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = app(dir.path());
+        let project = project(&app, dir.path());
+        let worker = agent(&app, &project, "Backend", "basic", false);
+        let dependency =
+            create_task(&app, &project.id, "Dependência", "", None, Some(&worker.id)).unwrap();
+        app.store
+            .set_task_status(&dependency.id, "blocked")
+            .unwrap();
+        for (index, dep) in [dependency.id.as_str(), "missing"].iter().enumerate() {
+            let mut waiting = dependency.clone();
+            waiting.id = format!("tk_wait_{index}");
+            waiting.root_task_id = waiting.id.clone();
+            waiting.depends_on = vec![dep.to_string()];
+            app.store.insert_task(&waiting).unwrap();
+        }
+        assert_eq!(tick(&app).unwrap(), 0);
+        for id in ["tk_wait_0", "tk_wait_1"] {
+            assert_eq!(app.store.get_task(id).unwrap().status, "blocked");
+            assert!(app.store.sessions_of(&worker.id, id).unwrap().is_empty());
+        }
+    }
+
+    #[tokio::test]
+    async fn report_intent_cannot_override_failure_or_a_cancelled_child() {
+        let dir = tempfile::tempdir().unwrap();
+        let app = app(dir.path());
+        let project = project(&app, dir.path());
+        let worker = agent(&app, &project, "Backend", "basic", false);
+        let failed = create_task(&app, &project.id, "Falha", "", None, Some(&worker.id)).unwrap();
+        app.store
+            .set_task_summary(&failed.id, "pretendia concluir")
+            .unwrap();
+        let outcome = TurnOutcome {
+            failed: Some("falha após reportar".into()),
+            ..Default::default()
+        };
+        after_turn(&app, &failed, &worker, outcome, 0, 0)
+            .await
+            .unwrap();
+        assert_eq!(app.store.get_task(&failed.id).unwrap().status, "blocked");
+        let parent = create_task(&app, &project.id, "Pai", "", None, Some(&worker.id)).unwrap();
+        let mut child = parent.clone();
+        child.id = "tk_cancelled".into();
+        child.parent_task_id = Some(parent.id.clone());
+        child.root_task_id = parent.id.clone();
+        child.status = "cancelled".into();
+        app.store.insert_task(&child).unwrap();
+        after_turn(&app, &parent, &worker, TurnOutcome::default(), 0, 0)
+            .await
+            .unwrap();
+        assert_eq!(app.store.get_task(&parent.id).unwrap().status, "blocked");
+        assert!(!app
+            .store
+            .all_events()
+            .unwrap()
+            .iter()
+            .any(|event| event.kind == EventKind::TaskDone
+                && (event.task_id.as_deref() == Some(&failed.id)
+                    || event.task_id.as_deref() == Some(&parent.id))));
+    }
 
     #[tokio::test]
     async fn create_task_picks_the_orchestrator() {

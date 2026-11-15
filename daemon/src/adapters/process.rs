@@ -14,6 +14,19 @@ use crate::app::{App, AppError, AppResult};
 use crate::model::truncate;
 use crate::security;
 
+#[cfg(unix)]
+fn kill_group(pid: Option<u32>) {
+    if let Some(pid) = pid.and_then(|pid| i32::try_from(pid).ok()) {
+        let _ = nix::sys::signal::killpg(
+            nix::unistd::Pid::from_raw(pid),
+            nix::sys::signal::Signal::SIGKILL,
+        );
+    }
+}
+
+#[cfg(not(unix))]
+fn kill_group(_: Option<u32>) {}
+
 pub async fn run(
     app: &Arc<App>,
     ctx: &TurnCtx,
@@ -31,11 +44,20 @@ pub async fn run(
     }
     let mut raw_file = tokio::fs::File::create(&raw_path).await?;
 
+    let deadline = tokio::time::sleep(Duration::from_secs(app.cfg.turn_timeout_secs));
+    tokio::pin!(deadline);
     if ctx.agent.cli == "agy" {
-        register_agy_messenger(app, &spec.program).await;
+        tokio::select! {
+            _ = register_agy_messenger(app, &spec.program) => {},
+            _ = cancel.changed() => return Ok(TurnOutcome { cancelled: true, ..Default::default() }),
+            _ = &mut deadline => return Ok(TurnOutcome { failed: Some("tempo limite durante registro MCP".into()), ..Default::default() }),
+        }
     }
 
-    let mut child = Command::new(&spec.program)
+    let mut command = Command::new(&spec.program);
+    #[cfg(unix)]
+    command.process_group(0);
+    let mut child = command
         .args(&spec.args)
         .current_dir(&ctx.cwd)
         .env_clear()
@@ -60,6 +82,7 @@ pub async fn run(
                 spec.program
             ))
         })?;
+    let child_group = child.id();
 
     let stdout = child
         .stdout
@@ -83,8 +106,6 @@ pub async fn run(
         .cloned();
     let mut lines = BufReader::new(stdout).lines();
     let mut outcome = TurnOutcome::default();
-    let deadline = tokio::time::sleep(Duration::from_secs(app.cfg.turn_timeout_secs));
-    tokio::pin!(deadline);
     let mut timed_out = false;
 
     loop {
@@ -112,10 +133,32 @@ pub async fn run(
     }
 
     if outcome.cancelled || timed_out {
-        let _ = child.kill().await;
+        kill_group(child_group);
+        let _ = child.start_kill();
     }
-    let status = child.wait().await?;
-    let stderr_text = stderr_task.await.unwrap_or_default();
+    // EOF on stdout does not imply the process has exited. The same deadline
+    // and cancellation signal must cover process exit and inherited stderr.
+    let status = if outcome.cancelled || timed_out {
+        None
+    } else {
+        tokio::select! {
+            status = child.wait() => Some(status?),
+            _ = cancel.changed() => { outcome.cancelled = true; kill_group(child_group); let _ = child.start_kill(); None },
+            _ = &mut deadline => { timed_out = true; kill_group(child_group); let _ = child.start_kill(); None },
+        }
+    };
+    kill_group(child_group);
+    let mut stderr_task = stderr_task;
+    let stderr_text = if outcome.cancelled || timed_out {
+        stderr_task.abort();
+        String::new()
+    } else {
+        tokio::select! {
+            result = &mut stderr_task => result.unwrap_or_default(),
+            _ = cancel.changed() => { outcome.cancelled = true; stderr_task.abort(); String::new() },
+            _ = &mut deadline => { timed_out = true; stderr_task.abort(); String::new() },
+        }
+    };
     if timed_out {
         outcome.failed = Some(format!(
             "tempo limite de {}s excedido",
@@ -129,8 +172,9 @@ pub async fn run(
         };
         outcome.failed = Some(
             format!(
-                "{} terminou sem resultado ({status}) {detail}",
-                spec.program
+                "{} terminou sem resultado ({}) {detail}",
+                spec.program,
+                status.map(|s| s.to_string()).unwrap_or_default()
             )
             .trim()
             .to_string(),
@@ -149,11 +193,15 @@ async fn register_agy_messenger(app: &App, program: &str) {
     let Ok(daemon) = std::env::current_exe() else {
         return;
     };
-    let added = Command::new(program)
+    let mut command = Command::new(program);
+    #[cfg(unix)]
+    command.process_group(0);
+    let added = command
         .args(["mcp", "add", "regente"])
         .arg(&daemon)
         .arg("mcp-stdio")
         .stdin(Stdio::null())
+        .kill_on_drop(true)
         .output()
         .await;
     match added {

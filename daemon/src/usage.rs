@@ -97,15 +97,26 @@ pub fn windows(rows: &[UsageRow], now: DateTime<Utc>) -> BTreeMap<&'static str, 
     ])
 }
 
-fn limit_of(rule: &Value, window: &str) -> Option<f64> {
-    let key = match window {
-        "5h" => "limit_5h_usd",
-        "day" => "limit_day_usd",
-        _ => "limit_week_usd",
+/// Codex reports its plan usage only in its session files (D23).
+fn refresh_codex(app: &App, account_id: &str) -> AppResult<()> {
+    let Some(home) = std::env::var_os("CODEX_HOME")
+        .map(std::path::PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|h| std::path::Path::new(&h).join(".codex")))
+    else {
+        return Ok(());
     };
-    rule.get(key)
-        .and_then(Value::as_f64)
-        .filter(|limit| *limit > 0.0)
+    for item in crate::adapters::codex::latest_rate_limits(&home) {
+        if let crate::adapters::Parsed::RateLimit {
+            window,
+            pct,
+            resets_at,
+        } = item
+        {
+            app.store
+                .save_reported_pct(account_id, window, pct, resets_at.as_deref())?;
+        }
+    }
+    Ok(())
 }
 
 /// Usage per account and per agent, for the API and the sidebar card.
@@ -118,6 +129,9 @@ pub fn report_at(app: &App, now: DateTime<Utc>) -> AppResult<Value> {
     let rows = app.store.usage_since(&since)?;
     let mut accounts = Vec::new();
     for account in app.store.list_accounts()? {
+        if account.provider == "codex" {
+            refresh_codex(app, &account.id)?;
+        }
         let own: Vec<UsageRow> = rows
             .iter()
             .filter(|row| row.account_id.as_deref() == Some(&account.id))
@@ -134,14 +148,12 @@ pub fn report_at(app: &App, now: DateTime<Utc>) -> AppResult<Value> {
                         .and_then(parse_ts)
                         .is_none_or(|at| at > now)
                 });
-            let (pct, source, resets_at) = match reported {
-                Some((pct, resets)) => (Some(pct), "reported", resets),
-                None => (
-                    limit_of(&account.limit_rule, name).map(|limit| total.cost_usd / limit),
-                    "estimated",
-                    None,
-                ),
+            // Only what the CLI reported (D23): no spend/limit estimate in dollars.
+            let (pct, resets_at) = match reported {
+                Some((pct, resets)) => (Some(pct), resets),
+                None => (None, None),
             };
+            let source = if pct.is_some() { "reported" } else { "none" };
             app.store.save_usage_window(
                 &account.id,
                 name,
@@ -470,9 +482,6 @@ mod tests {
         let agent = agent(&app, &project, "Backend", "basic", false);
         app.emit(NewEvent::new(&agent.id, EventKind::Thinking, "x").usage(usage(0.25)))
             .unwrap();
-        let mut account = app.store.get_account("acc_claude").unwrap();
-        account.limit_rule = json!({ "limit_5h_usd": 1.0 });
-        app.store.upsert_account(&account).unwrap();
         let report = super::report(&app).unwrap();
         let claude = report["accounts"]
             .as_array()
@@ -480,8 +489,8 @@ mod tests {
             .iter()
             .find(|a| a["account_id"] == "acc_claude")
             .unwrap();
-        assert_eq!(claude["windows"]["5h"]["pct"], 0.25);
-        assert_eq!(claude["windows"]["5h"]["pct_source"], "estimated");
+        assert_eq!(claude["windows"]["5h"]["pct"], Value::Null);
+        assert_eq!(claude["windows"]["5h"]["pct_source"], "none");
         assert_eq!(claude["windows"]["day"]["cost_usd"], 0.25);
         app.store
             .save_reported_pct("acc_claude", "5h", 0.43, None)

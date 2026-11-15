@@ -74,6 +74,9 @@ impl Daemon {
     }
 
     async fn project(&self, root: &Path) -> String {
+        if !root.join(".git").exists() {
+            init_repo(root);
+        }
         let created = self
             .post(
                 "/api/v1/projects",
@@ -148,6 +151,24 @@ fn git(dir: &Path, args: &[&str]) -> String {
         String::from_utf8_lossy(&output.stderr)
     );
     String::from_utf8_lossy(&output.stdout).trim().to_string()
+}
+
+fn init_repo(root: &Path) {
+    git(root, &["init", "-q", "-b", "main"]);
+    git(
+        root,
+        &[
+            "-c",
+            "user.name=t",
+            "-c",
+            "user.email=t@t",
+            "commit",
+            "--allow-empty",
+            "-q",
+            "-m",
+            "init",
+        ],
+    );
 }
 
 /// Git repository with one commit on `main` and an ignored `.env` holding a fake secret.
@@ -321,6 +342,76 @@ async fn rest_routes_work() {
 }
 
 #[tokio::test]
+async fn account_models_route_lists_models() {
+    let d = daemon().await;
+    let claude = d.get("/api/v1/accounts/acc_claude/models").await;
+    assert_eq!(claude["models"][0]["id"], "opus");
+    assert_eq!(
+        d.call("GET", "/api/v1/accounts/acc_nope/models", None)
+            .await
+            .0,
+        404
+    );
+}
+
+#[tokio::test]
+async fn account_status_and_login_use_the_provider_table() {
+    let d = daemon().await;
+    // The `fake` provider runs `cli_path` with no arguments; `uname` prints a known line.
+    let fake = |id: &str, cli_path: &str| regente_daemon::model::Account {
+        id: id.into(),
+        provider: "fake".into(),
+        login_type: "subscription".into(),
+        cli_path: cli_path.into(),
+        default_model: String::new(),
+        limit_rule: json!({}),
+        max_concurrent: 1,
+    };
+    d.app
+        .store
+        .upsert_account(&fake("acc_ok", "uname"))
+        .unwrap();
+    d.app
+        .store
+        .upsert_account(&fake("acc_off", "false"))
+        .unwrap();
+    d.app
+        .store
+        .upsert_account(&fake("acc_missing", "/nonexistent/cli"))
+        .unwrap();
+
+    let ok = d.get("/api/v1/accounts/acc_ok/status").await;
+    assert_eq!(ok, json!({ "state": "connected", "detail": "Linux" }));
+    let off = d.get("/api/v1/accounts/acc_off/status").await;
+    assert_eq!(off["state"], "disconnected");
+    let missing = d.get("/api/v1/accounts/acc_missing/status").await;
+    assert_eq!(missing["state"], "unknown");
+    let agy = d.get("/api/v1/accounts/acc_agy/status").await;
+    assert_eq!(agy["state"], "unknown");
+    assert_eq!(
+        d.call("GET", "/api/v1/accounts/acc_nope/status", None)
+            .await
+            .0,
+        404
+    );
+
+    // The login terminal runs the login command in a PTY and closes when it exits.
+    let (mut socket, _) =
+        tokio_tungstenite::connect_async(format!("ws://{}/api/v1/accounts/acc_ok/login", d.addr))
+            .await
+            .unwrap();
+    let mut output = Vec::new();
+    tokio::time::timeout(Duration::from_secs(10), async {
+        while let Some(Ok(message)) = socket.next().await {
+            output.extend_from_slice(&message.into_data());
+        }
+    })
+    .await
+    .expect("login terminal did not close");
+    assert!(String::from_utf8_lossy(&output).contains("Linux"));
+}
+
+#[tokio::test]
 async fn task_events_reach_the_websocket_in_order() {
     let d = daemon().await;
     let root = tempfile::tempdir().unwrap();
@@ -368,9 +459,8 @@ async fn task_events_reach_the_websocket_in_order() {
         .iter()
         .map(|event| event["kind"].as_str().unwrap())
         .collect();
-    assert_eq!(
-        kinds,
-        vec![
+    assert!(
+        kinds.starts_with(&[
             "task_assigned",
             "status",
             "thinking",
@@ -380,7 +470,8 @@ async fn task_events_reach_the_websocket_in_order() {
             "command_result",
             "thinking",
             "task_done"
-        ]
+        ]),
+        "unexpected event order: {kinds:?}"
     );
     assert!(received
         .iter()
@@ -391,7 +482,10 @@ async fn task_events_reach_the_websocket_in_order() {
         .unwrap();
     assert_eq!(edit["target"], "src/health.ts");
     assert_eq!(edit["lines_added"], 3);
-    assert!(root.path().join("src/health.ts").exists());
+    let session = d.app.store.sessions_of(&agent, &task).unwrap().remove(0);
+    let worktree = PathBuf::from(session.worktree.unwrap());
+    assert!(worktree.join("src/health.ts").exists());
+    assert!(!root.path().join("src/health.ts").exists());
 
     let timeline = d
         .get(&format!("/api/v1/agents/{agent}/timeline?limit=4"))
@@ -401,7 +495,22 @@ async fn task_events_reach_the_websocket_in_order() {
     let older = d
         .get(&format!("/api/v1/agents/{agent}/timeline?before={before}"))
         .await;
-    assert_eq!(older["items"].as_array().unwrap().len(), 5);
+    let expected: Vec<_> = d
+        .app
+        .store
+        .timeline(&agent, Some(before), 50)
+        .unwrap()
+        .iter()
+        .map(|event| event.seq)
+        .collect();
+    let actual: Vec<_> = older["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|event| event["seq"].as_i64().unwrap())
+        .collect();
+    assert_eq!(actual, expected);
+    assert!(actual.iter().all(|seq| *seq < before));
     assert_eq!(older["next_before"], Value::Null);
     let diff = d.get(&format!("/api/v1/agents/{agent}/diff/latest")).await;
     assert!(diff["diff"]
@@ -419,6 +528,18 @@ async fn restart_rebuilds_state_from_events() {
     let task = d.task(&project, "Rota health", json!({})).await;
     wait_for("task done", || {
         d.app.store.get_task(&task).unwrap().status == "done"
+    })
+    .await;
+    wait_for("turn finished with merge approval", || {
+        !d.app.is_running(&agent)
+            && d.app
+                .store
+                .list_approvals(Some("pending"))
+                .unwrap()
+                .iter()
+                .any(|approval| {
+                    approval.task_id.as_deref() == Some(&task) && approval.action == "merge"
+                })
     })
     .await;
     let before = d.get("/api/v1/snapshot").await;
@@ -1155,7 +1276,7 @@ async fn messenger_speaks_mcp_over_http() {
             json!({ "jsonrpc": "2.0", "id": 2, "method": "tools/list" }),
         )
         .await;
-    assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 5);
+    assert_eq!(tools["result"]["tools"].as_array().unwrap().len(), 9);
     let sent = d
         .post(&path, json!({ "jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": { "name": "send_message", "arguments": { "to": "Frontend", "text": "oi" } } }))
         .await;
@@ -1213,6 +1334,7 @@ async fn an_agent_over_budget_shows_up_paused_with_the_reason() {
 async fn creating_a_project_writes_team_files_and_runs_with_its_permissions() {
     let d = daemon().await;
     let root = tempfile::tempdir().unwrap();
+    init_repo(root.path());
     std::fs::write(root.path().join("CLAUDE.md"), "# Notas do Pedro\n").unwrap();
     let created = d
         .post(
@@ -1282,5 +1404,402 @@ async fn creating_a_project_writes_team_files_and_runs_with_its_permissions() {
         std::fs::read_to_string(root.path().join(".regente/team.yaml"))
             .unwrap()
             .contains("name: \"QA\"")
+    );
+}
+
+#[tokio::test]
+async fn browser_origins_and_hosts_are_checked_before_mutations_and_websockets() {
+    use axum::body::Body;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    let daemon = daemon().await;
+    let app = regente_daemon::api::router(daemon.app.clone());
+    for (method, path, host, origin, blocked) in [
+        (
+            "POST",
+            "/api/v1/tasks",
+            "127.0.0.1:7717",
+            Some("https://evil.example"),
+            true,
+        ),
+        (
+            "GET",
+            "/api/v1/agents/a/pty",
+            "127.0.0.1:7717",
+            Some("https://evil.example"),
+            true,
+        ),
+        (
+            "GET",
+            "/api/v1/stream",
+            "evil.example:7717",
+            Some("http://localhost:5173"),
+            true,
+        ),
+        (
+            "POST",
+            "/api/v1/tasks",
+            "localhost.evil.example",
+            None,
+            true,
+        ),
+        ("POST", "/api/v1/tasks", "127.0.0.1:bad", None, true),
+        (
+            "POST",
+            "/api/v1/pick-folder",
+            "127.0.0.1:7717",
+            Some("https://evil.example"),
+            true,
+        ),
+        // The route exists; GET never opens a dialog.
+        ("GET", "/api/v1/pick-folder", "127.0.0.1:7717", None, false),
+        (
+            "POST",
+            "/api/v1/tasks",
+            "localhost:7717",
+            Some("http://localhost:5173"),
+            false,
+        ),
+        (
+            "GET",
+            "/api/v1/agents/a/pty",
+            "[::1]:7717",
+            Some("http://127.0.0.1:5173"),
+            false,
+        ),
+        ("GET", "/api/v1/health", "127.0.0.1:7717", None, false),
+    ] {
+        let mut builder = Request::builder()
+            .method(method)
+            .uri(path)
+            .header("host", host);
+        if let Some(origin) = origin {
+            builder = builder.header("origin", origin);
+        }
+        let response = app
+            .clone()
+            .oneshot(builder.body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            response.status() == StatusCode::FORBIDDEN,
+            blocked,
+            "{method} {path}, host {host}, origin {origin:?}"
+        );
+    }
+}
+
+#[tokio::test]
+async fn project_and_agent_defaults_follow_the_repository_and_engine() {
+    let d = daemon().await;
+    let root = tempfile::tempdir().unwrap();
+    init_repo(root.path());
+    git(root.path(), &["checkout", "-q", "-b", "dev"]);
+    let created = d
+        .post(
+            "/api/v1/projects",
+            json!({
+                "name": "Demo",
+                "root": root.path(),
+                "agents": [{ "cli": "fake", "is_orchestrator": true }, { "cli": "fake" }]
+            }),
+        )
+        .await;
+    assert_eq!(created["project"]["base_branch"], "dev");
+    assert_eq!(created["agents"][0]["name"], "Teste");
+    assert_eq!(created["agents"][0]["role"], "Orquestrador");
+    assert_eq!(created["agents"][1]["name"], "Teste 2");
+    assert_eq!(created["agents"][1]["role"], "Agente");
+    let project = created["project"]["id"].as_str().unwrap();
+    for (cli, expected) in [
+        ("claude", "Claude"),
+        ("claude", "Claude 2"),
+        ("agy", "Antigravity"),
+    ] {
+        let agent = d
+            .post(
+                "/api/v1/agents",
+                json!({ "project_id": project, "cli": cli }),
+            )
+            .await;
+        assert_eq!(agent["name"], expected);
+        assert_eq!(agent["parent_id"], created["agents"][0]["id"]);
+    }
+    let (status, _) = d
+        .call(
+            "POST",
+            "/api/v1/agents",
+            Some(json!({ "project_id": project, "cli": "codex", "name": "claude" })),
+        )
+        .await;
+    assert_eq!(status, 400);
+}
+
+#[tokio::test]
+async fn invalid_projects_leave_no_database_rows_or_generated_files() {
+    let d = daemon().await;
+    let root = repo();
+    let cases = vec![
+        json!({"agents":[{"name":"A","cli":"fake"},{"name":"a","cli":"fake"}]}),
+        json!({"agents":[{"name":"A","cli":"invalid"}]}),
+        json!({"base_branch":"missing"}),
+        json!({"folders":[{"path":"../outside","access":"write"}]}),
+        json!({"folders":[{"path":"/tmp/outside","access":"write"}]}),
+    ];
+    #[cfg(unix)]
+    std::os::unix::fs::symlink("/tmp", root.path().join("link")).unwrap();
+    let mut cases = cases;
+    #[cfg(unix)]
+    cases.push(json!({"folders":[{"path":"link/outside","access":"write"}]}));
+    for extra in cases {
+        let mut body = json!({"name":"Demo", "root":root.path()});
+        body.as_object_mut()
+            .unwrap()
+            .extend(extra.as_object().unwrap().clone());
+        let (status, _) = d.call("POST", "/api/v1/projects", Some(body)).await;
+        assert_eq!(status, 400);
+        assert_eq!(d.get("/api/v1/projects").await, json!([]));
+        assert!(!root.path().join(".regente").exists());
+        assert!(!root.path().join("CLAUDE.md").exists());
+    }
+}
+
+#[tokio::test]
+async fn project_file_error_does_not_persist_project() {
+    let d = daemon().await;
+    let root = repo();
+    std::fs::create_dir_all(root.path().join(".regente/team.yaml")).unwrap();
+    std::fs::write(root.path().join("CLAUDE.md"), "existing").unwrap();
+    let (status, _) = d
+        .call(
+            "POST",
+            "/api/v1/projects",
+            Some(json!({"name":"Demo", "root":root.path(), "agents":[{"name":"A","cli":"fake"}]})),
+        )
+        .await;
+    assert!(status >= 400);
+    assert_eq!(d.get("/api/v1/projects").await, json!([]));
+    assert_eq!(
+        std::fs::read_to_string(root.path().join("CLAUDE.md")).unwrap(),
+        "existing"
+    );
+}
+
+#[tokio::test]
+async fn restricted_folders_block_real_cli_before_worktree_and_guard_fake_steps() {
+    let d = daemon().await;
+    let root = repo();
+    let created = d.post("/api/v1/projects", json!({"name":"Demo", "root":root.path(), "folders":[{"path":"README.md","access":"none"},{"path":"src","access":"read"}], "agents":[{"name":"Fake","cli":"fake","is_orchestrator":true}]})).await;
+    let project = created["project"]["id"].as_str().unwrap();
+    let fake = created["agents"][0]["id"].as_str().unwrap();
+    let task = d.task(project, "Fake", json!({})).await;
+    wait_for("fake task done", || {
+        d.app.store.get_task(&task).unwrap().status == "done"
+    })
+    .await;
+    let events = d.events();
+    assert!(events.iter().any(|e| e.agent_id == fake
+        && e.kind == EventKind::SecurityAlert
+        && e.summary.contains("Leitura bloqueada")));
+    assert!(events.iter().any(|e| e.agent_id == fake
+        && e.kind == EventKind::SecurityAlert
+        && e.summary.contains("Escrita bloqueada")));
+    assert!(!root.path().join("src/health.ts").exists());
+    let real = d
+        .post(
+            "/api/v1/agents",
+            json!({"project_id":project,"name":"Real","cli":"codex"}),
+        )
+        .await;
+    let real_id = real["id"].as_str().unwrap();
+    let real_task = d.task(project, "Real", json!({"agent_id":real_id})).await;
+    wait_for("real task blocked", || {
+        d.app.store.get_task(&real_task).unwrap().status == "blocked"
+    })
+    .await;
+    assert!(d
+        .app
+        .store
+        .sessions_of(real_id, &real_task)
+        .unwrap()
+        .is_empty());
+    assert!(d.events().iter().any(|e| e.agent_id == real_id
+        && e.kind == EventKind::Error
+        && e.summary.contains("acesso restrito")));
+}
+
+#[tokio::test]
+async fn checkpoint_does_not_commit_a_restricted_change_made_during_turn() {
+    let fixture_dir = tempfile::tempdir().unwrap();
+    std::fs::create_dir(fixture_dir.path().join("fake")).unwrap();
+    std::fs::write(
+        fixture_dir.path().join("fake/hold.json"),
+        r#"{"turns":[[{"do":"sleep","ms":1500}]]}"#,
+    )
+    .unwrap();
+    let d = daemon_with(|cfg| cfg.fixtures_dir = fixture_dir.path().to_path_buf()).await;
+    let root = repo();
+    let created = d.post("/api/v1/projects", json!({"name":"Demo", "root":root.path(), "folders":[{"path":"protected","access":"read"}], "agents":[{"name":"Fake","cli":"fake","is_orchestrator":true,"settings":{"fake_scenario":"hold"}}]})).await;
+    let project = created["project"]["id"].as_str().unwrap();
+    let agent = created["agents"][0]["id"].as_str().unwrap();
+    let task = d.task(project, "Alterar", json!({})).await;
+    wait_for("session", || {
+        !d.app.store.sessions_of(agent, &task).unwrap().is_empty()
+    })
+    .await;
+    let session = d.app.store.sessions_of(agent, &task).unwrap().remove(0);
+    let cwd = PathBuf::from(session.worktree.unwrap());
+    std::fs::create_dir_all(cwd.join("protected")).unwrap();
+    std::fs::write(cwd.join("protected/blocked.txt"), "restricted change").unwrap();
+    wait_for("agent paused", || {
+        d.app.store.get_agent(agent).unwrap().paused
+    })
+    .await;
+    assert!(d.events().iter().any(|event| event.agent_id == agent
+        && event.kind == EventKind::SecurityAlert
+        && event.summary.contains("pasta restrita")));
+    assert!(git(&cwd, &["status", "--porcelain"]).contains("protected/"));
+    assert_eq!(
+        git(&cwd, &["rev-parse", "HEAD"]),
+        git(root.path(), &["rev-parse", "main"])
+    );
+}
+
+#[tokio::test]
+async fn report_done_waits_for_checkpoint_before_starting_dependent_qa() {
+    let d = daemon().await;
+    let root = repo();
+    let project = d.project(root.path()).await;
+    let maestro = d
+        .agent(
+            &project,
+            "Maestro",
+            "orchestrator",
+            json!({"is_orchestrator":true}),
+        )
+        .await;
+    let _backend = d.agent(&project, "Backend", "backend", json!({})).await;
+    let frontend = d
+        .agent(&project, "Frontend", "frontend-late", json!({}))
+        .await;
+    let qa = d.agent(&project, "QA", "qa", json!({})).await;
+    let task = d
+        .task(&project, "Teste de barreira", json!({"agent_id":maestro}))
+        .await;
+    wait_for("report intent", || {
+        d.app
+            .store
+            .list_tasks(Some(&project))
+            .unwrap()
+            .iter()
+            .any(|item| {
+                item.owner_agent_id == frontend && item.summary.as_deref() == Some("Tela pronta.")
+            })
+    })
+    .await;
+    let tasks = d.app.store.list_tasks(Some(&project)).unwrap();
+    let screen = tasks
+        .iter()
+        .find(|item| item.owner_agent_id == frontend)
+        .unwrap();
+    let tests = tasks.iter().find(|item| item.owner_agent_id == qa).unwrap();
+    assert_eq!(screen.status, "running");
+    assert_eq!(tests.status, "queued");
+    assert!(d.app.store.sessions_of(&qa, &tests.id).unwrap().is_empty());
+    assert!(!d
+        .events()
+        .iter()
+        .any(|event| event.task_id.as_deref() == Some(&screen.id)
+            && event.kind == EventKind::TaskDone));
+    let screen_id = screen.id.clone();
+    let qa_id = tests.id.clone();
+    wait_for("qa done", || {
+        d.app.store.get_task(&qa_id).unwrap().status == "done"
+    })
+    .await;
+    let qa_dir = PathBuf::from(
+        d.app.store.sessions_of(&qa, &qa_id).unwrap()[0]
+            .worktree
+            .clone()
+            .unwrap(),
+    );
+    assert_eq!(
+        std::fs::read_to_string(qa_dir.join("src/Status.tsx")).unwrap(),
+        "export const status = 'ok';\n"
+    );
+    let events = d.events();
+    let edit = events
+        .iter()
+        .find(|e| {
+            e.agent_id == frontend
+                && e.kind == EventKind::FileEdit
+                && e.target.as_deref() == Some("src/Status.tsx")
+        })
+        .unwrap()
+        .seq;
+    let done = events
+        .iter()
+        .find(|e| e.task_id.as_deref() == Some(&screen_id) && e.kind == EventKind::TaskDone)
+        .unwrap()
+        .seq;
+    let qa_start = events
+        .iter()
+        .find(|e| e.task_id.as_deref() == Some(&qa_id) && e.kind == EventKind::Status)
+        .unwrap()
+        .seq;
+    assert!(edit < done && done < qa_start);
+    wait_for("root completed", || {
+        d.app.store.get_task(&task).unwrap().status == "done"
+    })
+    .await;
+}
+
+#[tokio::test]
+async fn user_edits_project_settings_and_folder_after_creation() {
+    let d = daemon().await;
+    let root = tempfile::tempdir().unwrap();
+    let project = d.project(root.path()).await;
+    let path = format!("/api/v1/projects/{project}");
+
+    let (status, edited) = d
+        .call(
+            "PATCH",
+            &path,
+            Some(json!({ "name": "Loja", "context": "Loja online" })),
+        )
+        .await;
+    assert_eq!(status, 200, "{edited}");
+    assert_eq!(edited["name"], "Loja");
+    assert_eq!(edited["context"], "Loja online");
+
+    let other = tempfile::tempdir().unwrap();
+    init_repo(other.path());
+    let (status, moved) = d
+        .call("PATCH", &path, Some(json!({ "root": other.path() })))
+        .await;
+    assert_eq!(status, 200, "{moved}");
+    assert_eq!(moved["root"], json!(other.path()));
+    assert!(other.path().join(".regente/team.yaml").exists());
+    let listed = d.get("/api/v1/projects").await;
+    assert_eq!(listed[0]["root"], json!(other.path()));
+
+    let plain = tempfile::tempdir().unwrap();
+    let (status, _) = d
+        .call("PATCH", &path, Some(json!({ "root": plain.path() })))
+        .await;
+    assert_eq!(status, 400, "a pasta sem Git é recusada");
+
+    let agent = d.agent(&project, "Dev", "basic", json!({})).await;
+    d.post(&format!("/api/v1/agents/{agent}/pause"), json!({}))
+        .await;
+    d.task(&project, "Em andamento", json!({})).await;
+    let (status, refused) = d
+        .call("PATCH", &path, Some(json!({ "root": root.path() })))
+        .await;
+    assert_eq!(status, 400, "tarefa ativa bloqueia a troca: {refused}");
+    assert_eq!(
+        d.get("/api/v1/projects").await[0]["root"],
+        json!(other.path())
     );
 }

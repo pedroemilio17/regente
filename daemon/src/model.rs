@@ -19,6 +19,18 @@ pub fn new_id(prefix: &str) -> String {
 }
 
 /// Truncate a string to at most `max` characters, adding an ellipsis.
+/// Longest full text kept in `data.text` of an event.
+pub const MAX_FULL_TEXT: usize = 64 * 1024;
+
+/// Full text for `data.text`: whitespace kept, cut at a safe size.
+pub fn full_text(text: &str) -> String {
+    let text = text.trim();
+    match text.char_indices().nth(MAX_FULL_TEXT) {
+        Some((end, _)) => format!("{}…", &text[..end]),
+        None => text.to_string(),
+    }
+}
+
 pub fn truncate(text: &str, max: usize) -> String {
     let flat: String = text.split_whitespace().collect::<Vec<_>>().join(" ");
     if flat.chars().count() <= max {

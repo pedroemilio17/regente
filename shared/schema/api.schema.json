@@ -8,200 +8,703 @@
     "Project": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "root", "base_branch", "context", "folders", "blocked", "day_budget_usd", "created_at"],
+      "required": [
+        "id",
+        "name",
+        "root",
+        "base_branch",
+        "context",
+        "folders",
+        "blocked",
+        "day_budget_usd",
+        "created_at"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "name": { "type": "string" },
-        "root": { "type": "string", "description": "Absolute path of the repository on this machine." },
-        "base_branch": { "type": "string" },
-        "context": { "type": "string" },
-        "folders": { "type": "array", "items": { "$ref": "#/$defs/Folder" } },
-        "blocked": { "type": "array", "items": { "type": "string" } },
-        "day_budget_usd": { "type": ["number", "null"] },
-        "created_at": { "type": "string", "format": "date-time" }
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "root": {
+          "type": "string",
+          "description": "Absolute path of the repository on this machine."
+        },
+        "base_branch": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "folders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Folder"
+          }
+        },
+        "blocked": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "day_budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
       }
     },
     "Folder": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path", "access"],
+      "required": [
+        "path",
+        "access"
+      ],
       "properties": {
-        "path": { "type": "string" },
-        "access": { "type": "string", "enum": ["read", "write", "none"] }
+        "path": {
+          "type": "string"
+        },
+        "access": {
+          "type": "string",
+          "enum": [
+            "read",
+            "write",
+            "none"
+          ]
+        }
       }
     },
     "Account": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "provider", "login_type", "cli_path", "default_model", "limit_rule", "max_concurrent"],
+      "required": [
+        "id",
+        "provider",
+        "login_type",
+        "cli_path",
+        "default_model",
+        "limit_rule",
+        "max_concurrent"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "provider": { "type": "string", "enum": ["claude", "codex", "agy"] },
-        "login_type": { "type": "string", "enum": ["subscription", "api_key"] },
-        "cli_path": { "type": "string" },
-        "default_model": { "type": "string" },
+        "id": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "agy"
+          ]
+        },
+        "login_type": {
+          "type": "string",
+          "enum": [
+            "subscription",
+            "api_key"
+          ]
+        },
+        "cli_path": {
+          "type": "string"
+        },
+        "default_model": {
+          "type": "string"
+        },
         "limit_rule": {
           "type": "object",
           "additionalProperties": true,
           "properties": {
-            "limit_5h_usd": { "type": "number" },
-            "limit_day_usd": { "type": "number" },
-            "limit_week_usd": { "type": "number" }
+            "limit_5h_usd": {
+              "type": "number"
+            },
+            "limit_day_usd": {
+              "type": "number"
+            },
+            "limit_week_usd": {
+              "type": "number"
+            }
           }
         },
-        "max_concurrent": { "type": "integer", "minimum": 1 }
+        "max_concurrent": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "AccountStatus": {
+      "description": "GET /accounts/{id}/status. Login itself is the PTY at GET /accounts/{id}/login (WebSocket).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "connected",
+            "disconnected",
+            "unknown"
+          ]
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "AccountModels": {
+      "description": "GET /accounts/{id}/models. Models from the provider's own list command (cached a few minutes); empty list plus detail on failure.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "models"
+      ],
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "efforts": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "default_effort": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "detail": {
+          "type": "string"
+        }
+      }
+    },
+    "PickedFolder": {
+      "description": "POST /pick-folder. The daemon opens the system folder picker; null when cancelled. 409 if one is already open, 503 without a desktop session.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "Agent": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id", "project_id", "name", "cli", "role", "is_orchestrator", "parent_id", "account_id", "model",
-        "pet", "permissions", "settings", "budget_usd", "paused", "pause_reason", "created_at"
+        "id",
+        "project_id",
+        "name",
+        "cli",
+        "role",
+        "is_orchestrator",
+        "parent_id",
+        "account_id",
+        "model",
+        "pet",
+        "permissions",
+        "settings",
+        "budget_usd",
+        "paused",
+        "pause_reason",
+        "created_at"
       ],
       "properties": {
-        "id": { "type": "string" },
-        "project_id": { "type": "string" },
-        "name": { "type": "string" },
-        "cli": { "type": "string", "enum": ["claude", "codex", "agy", "fake"] },
-        "role": { "type": "string" },
-        "is_orchestrator": { "type": "boolean" },
-        "parent_id": { "type": ["string", "null"] },
-        "account_id": { "type": ["string", "null"] },
-        "model": { "type": "string" },
-        "pet": { "type": "object", "additionalProperties": true },
-        "permissions": { "type": "object", "additionalProperties": true },
-        "settings": { "type": "object", "additionalProperties": true },
-        "budget_usd": { "type": ["number", "null"] },
-        "paused": { "type": "boolean" },
-        "pause_reason": { "type": ["string", "null"] },
-        "created_at": { "type": "string", "format": "date-time" },
-        "live": { "$ref": "#/$defs/AgentLive" }
+        "id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cli": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "agy",
+            "fake"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "is_orchestrator": {
+          "type": "boolean"
+        },
+        "parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "account_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "pet": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "species": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "pause_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
       }
     },
     "AgentLive": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "doing_now", "task_id", "recent_changes", "cost_usd", "tokens", "last_ts", "pause_reason"],
+      "required": [
+        "status",
+        "doing_now",
+        "task_id",
+        "recent_changes",
+        "cost_usd",
+        "tokens",
+        "last_ts",
+        "pause_reason"
+      ],
       "properties": {
-        "status": { "type": "string", "enum": ["working", "thinking", "waiting", "idle", "paused"] },
-        "doing_now": { "type": "string" },
-        "task_id": { "type": ["string", "null"] },
-        "recent_changes": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/Change" } },
-        "cost_usd": { "type": "number" },
-        "tokens": { "type": "integer" },
-        "last_ts": { "type": ["string", "null"] },
-        "pause_reason": { "type": ["string", "null"] }
+        "status": {
+          "type": "string",
+          "enum": [
+            "working",
+            "thinking",
+            "waiting",
+            "idle",
+            "paused"
+          ]
+        },
+        "doing_now": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "recent_changes": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/Change"
+          }
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "tokens": {
+          "type": "integer"
+        },
+        "last_ts": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pause_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "Change": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["event_id", "ts", "path", "summary", "lines_added", "lines_removed"],
+      "required": [
+        "event_id",
+        "ts",
+        "path",
+        "summary",
+        "lines_added",
+        "lines_removed"
+      ],
       "properties": {
-        "event_id": { "type": "string" },
-        "ts": { "type": "string" },
-        "path": { "type": "string" },
-        "summary": { "type": "string" },
-        "lines_added": { "type": "integer" },
-        "lines_removed": { "type": "integer" }
+        "event_id": {
+          "type": "string"
+        },
+        "ts": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "lines_added": {
+          "type": "integer"
+        },
+        "lines_removed": {
+          "type": "integer"
+        }
       }
     },
     "Task": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id", "project_id", "parent_task_id", "root_task_id", "owner_agent_id", "title", "brief", "done_criteria",
-        "status", "branch", "budget_usd", "depends_on", "summary", "message_count", "stalled_rounds", "created_at", "finished_at"
+        "id",
+        "project_id",
+        "parent_task_id",
+        "root_task_id",
+        "owner_agent_id",
+        "title",
+        "brief",
+        "done_criteria",
+        "status",
+        "branch",
+        "budget_usd",
+        "depends_on",
+        "summary",
+        "message_count",
+        "stalled_rounds",
+        "created_at",
+        "finished_at"
       ],
       "properties": {
-        "id": { "type": "string" },
-        "project_id": { "type": "string" },
-        "parent_task_id": { "type": ["string", "null"] },
-        "root_task_id": { "type": "string" },
-        "owner_agent_id": { "type": "string" },
-        "title": { "type": "string" },
-        "brief": { "type": "string" },
-        "done_criteria": { "type": "string" },
-        "status": { "type": "string", "enum": ["queued", "running", "waiting", "blocked", "done", "cancelled"] },
-        "branch": { "type": ["string", "null"] },
-        "budget_usd": { "type": ["number", "null"] },
-        "depends_on": { "type": "array", "items": { "type": "string" } },
-        "summary": { "type": ["string", "null"] },
-        "message_count": { "type": "integer" },
-        "stalled_rounds": { "type": "integer" },
-        "created_at": { "type": "string" },
-        "finished_at": { "type": ["string", "null"] }
+        "id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "parent_task_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "root_task_id": {
+          "type": "string"
+        },
+        "owner_agent_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "brief": {
+          "type": "string"
+        },
+        "done_criteria": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "waiting",
+            "blocked",
+            "done",
+            "cancelled"
+          ]
+        },
+        "branch": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_count": {
+          "type": "integer"
+        },
+        "stalled_rounds": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "finished_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "Message": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "task_id", "from_agent", "to_agent", "text", "created_at", "delivered_at"],
+      "required": [
+        "id",
+        "task_id",
+        "from_agent",
+        "to_agent",
+        "text",
+        "created_at",
+        "delivered_at"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "task_id": { "type": ["string", "null"] },
-        "from_agent": { "type": "string", "description": "Agent id, or `user`." },
-        "to_agent": { "type": "string" },
-        "text": { "type": "string" },
-        "created_at": { "type": "string" },
-        "delivered_at": { "type": ["string", "null"] }
+        "id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "from_agent": {
+          "type": "string",
+          "description": "Agent id, or `user`."
+        },
+        "to_agent": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "delivered_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "Approval": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "agent_id", "task_id", "action", "detail", "status", "decided_by", "created_at", "decided_at"],
+      "required": [
+        "id",
+        "agent_id",
+        "task_id",
+        "action",
+        "detail",
+        "status",
+        "decided_by",
+        "created_at",
+        "decided_at"
+      ],
       "properties": {
-        "id": { "type": "string" },
-        "agent_id": { "type": "string" },
-        "task_id": { "type": ["string", "null"] },
-        "action": { "type": "string", "description": "merge, push, db_migration, deploy, delete_outside_worktree" },
-        "detail": { "type": "string" },
-        "status": { "type": "string", "enum": ["pending", "approved", "denied"] },
-        "decided_by": { "type": ["string", "null"] },
-        "created_at": { "type": "string" },
-        "decided_at": { "type": ["string", "null"] }
+        "id": {
+          "type": "string"
+        },
+        "agent_id": {
+          "type": "string"
+        },
+        "task_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "action": {
+          "type": "string",
+          "description": "merge, push, db_migration, deploy, delete_outside_worktree"
+        },
+        "detail": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "approved",
+            "denied"
+          ]
+        },
+        "decided_by": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "decided_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "UsageWindow": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["start", "tokens", "cost_usd"],
+      "required": [
+        "start",
+        "tokens",
+        "cost_usd"
+      ],
       "properties": {
-        "start": { "type": ["string", "null"] },
-        "tokens": { "type": "integer" },
-        "cost_usd": { "type": "number" },
-        "pct": { "type": ["number", "null"], "description": "Share of the plan window used, 0.0–1.0." },
-        "pct_source": { "type": "string", "enum": ["reported", "estimated"] },
-        "resets_at": { "type": ["string", "null"] }
+        "start": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tokens": {
+          "type": "integer"
+        },
+        "cost_usd": {
+          "type": "number"
+        },
+        "pct": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "Share of the plan window used, 0.0–1.0."
+        },
+        "pct_source": {
+          "type": "string",
+          "enum": [
+            "reported",
+            "estimated",
+            "none"
+          ]
+        },
+        "resets_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "UsageWindows": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "5h": { "$ref": "#/$defs/UsageWindow" },
-        "day": { "$ref": "#/$defs/UsageWindow" },
-        "week": { "$ref": "#/$defs/UsageWindow" }
+        "5h": {
+          "$ref": "#/$defs/UsageWindow"
+        },
+        "day": {
+          "$ref": "#/$defs/UsageWindow"
+        },
+        "week": {
+          "$ref": "#/$defs/UsageWindow"
+        }
       }
     },
     "UsageReport": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["generated_at", "accounts", "agents"],
+      "required": [
+        "generated_at",
+        "accounts",
+        "agents"
+      ],
       "properties": {
-        "generated_at": { "type": "string" },
+        "generated_at": {
+          "type": "string"
+        },
         "accounts": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["account_id", "provider", "windows"],
+            "required": [
+              "account_id",
+              "provider",
+              "windows"
+            ],
             "properties": {
-              "account_id": { "type": "string" },
-              "provider": { "type": "string" },
-              "windows": { "$ref": "#/$defs/UsageWindows" }
+              "account_id": {
+                "type": "string"
+              },
+              "provider": {
+                "type": "string"
+              },
+              "windows": {
+                "$ref": "#/$defs/UsageWindows"
+              }
             }
           }
         },
@@ -210,11 +713,24 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["agent_id", "windows", "budget_usd"],
+            "required": [
+              "agent_id",
+              "windows",
+              "budget_usd"
+            ],
             "properties": {
-              "agent_id": { "type": "string" },
-              "windows": { "$ref": "#/$defs/UsageWindows" },
-              "budget_usd": { "type": ["number", "null"] }
+              "agent_id": {
+                "type": "string"
+              },
+              "windows": {
+                "$ref": "#/$defs/UsageWindows"
+              },
+              "budget_usd": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              }
             }
           }
         }
@@ -223,50 +739,473 @@
     "Snapshot": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "api_version", "version", "last_seq", "projects", "agents", "tasks", "accounts", "usage", "approvals", "messages"],
+      "required": [
+        "type",
+        "api_version",
+        "version",
+        "last_seq",
+        "projects",
+        "agents",
+        "tasks",
+        "accounts",
+        "usage",
+        "approvals",
+        "messages"
+      ],
       "properties": {
-        "type": { "const": "snapshot" },
-        "api_version": { "type": "string" },
-        "version": { "type": "string" },
-        "last_seq": { "type": "integer" },
-        "projects": { "type": "array", "items": { "$ref": "#/$defs/Project" } },
-        "agents": { "type": "array", "items": { "$ref": "#/$defs/Agent" } },
-        "tasks": { "type": "array", "items": { "$ref": "#/$defs/Task" } },
-        "accounts": { "type": "array", "items": { "$ref": "#/$defs/Account" } },
-        "usage": { "$ref": "#/$defs/UsageReport" },
-        "approvals": { "type": "array", "items": { "$ref": "#/$defs/Approval" } },
-        "messages": { "type": "array", "items": { "$ref": "#/$defs/Message" } }
+        "type": {
+          "const": "snapshot"
+        },
+        "api_version": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "last_seq": {
+          "type": "integer"
+        },
+        "projects": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Project"
+          }
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AgentView"
+          }
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Task"
+          }
+        },
+        "accounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Account"
+          }
+        },
+        "usage": {
+          "$ref": "#/$defs/UsageReport"
+        },
+        "approvals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Approval"
+          }
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Message"
+          }
+        }
       }
     },
     "EventsMessage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "items"],
+      "required": [
+        "type",
+        "items"
+      ],
       "properties": {
-        "type": { "const": "events" },
-        "items": { "type": "array", "items": { "$ref": "event.schema.json" } }
+        "type": {
+          "const": "events"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "event.schema.json"
+          }
+        }
       }
     },
     "UsageMessage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "usage"],
-      "properties": { "type": { "const": "usage" }, "usage": { "$ref": "#/$defs/UsageReport" } }
+      "required": [
+        "type",
+        "usage"
+      ],
+      "properties": {
+        "type": {
+          "const": "usage"
+        },
+        "usage": {
+          "$ref": "#/$defs/UsageReport"
+        }
+      }
     },
     "ApprovalMessage": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["type", "approval"],
-      "properties": { "type": { "const": "approval" }, "approval": { "$ref": "#/$defs/Approval" } }
+      "required": [
+        "type",
+        "approval"
+      ],
+      "properties": {
+        "type": {
+          "const": "approval"
+        },
+        "approval": {
+          "$ref": "#/$defs/Approval"
+        }
+      }
     },
     "StreamMessage": {
       "description": "Every message of the /api/v1/stream WebSocket.",
       "oneOf": [
-        { "$ref": "#/$defs/Snapshot" },
-        { "$ref": "#/$defs/EventsMessage" },
-        { "$ref": "#/$defs/UsageMessage" },
-        { "$ref": "#/$defs/ApprovalMessage" }
+        {
+          "$ref": "#/$defs/Snapshot"
+        },
+        {
+          "$ref": "#/$defs/EventsMessage"
+        },
+        {
+          "$ref": "#/$defs/UsageMessage"
+        },
+        {
+          "$ref": "#/$defs/ApprovalMessage"
+        }
       ]
+    },
+    "AgentView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "project_id",
+        "name",
+        "cli",
+        "role",
+        "is_orchestrator",
+        "parent_id",
+        "account_id",
+        "model",
+        "pet",
+        "permissions",
+        "settings",
+        "budget_usd",
+        "paused",
+        "pause_reason",
+        "created_at",
+        "live"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cli": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "agy",
+            "fake"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "is_orchestrator": {
+          "type": "boolean"
+        },
+        "parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "account_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "pet": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "species": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "paused": {
+          "type": "boolean"
+        },
+        "pause_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "live": {
+          "$ref": "#/$defs/AgentLive"
+        }
+      }
+    },
+    "TimelinePage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "items",
+        "next_before"
+      ],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "event.schema.json"
+          }
+        },
+        "next_before": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "LatestDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event",
+        "diff"
+      ],
+      "properties": {
+        "event": {
+          "anyOf": [
+            {
+              "$ref": "event.schema.json"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "diff": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "NewAgentBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cli"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cli": {
+          "type": "string",
+          "enum": [
+            "claude",
+            "codex",
+            "agy",
+            "fake"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "is_orchestrator": {
+          "type": "boolean"
+        },
+        "parent_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "account_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": "string"
+        },
+        "pet": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "species": {
+              "type": "string"
+            },
+            "color": {
+              "type": "string"
+            }
+          }
+        },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "settings": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      }
+    },
+    "ProjectPatch": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string" },
+        "root": { "type": "string" },
+        "base_branch": { "type": "string" },
+        "context": { "type": "string" },
+        "folders": { "type": "array", "items": { "$ref": "#/$defs/Folder" } },
+        "blocked": { "type": "array", "items": { "type": "string" } },
+        "day_budget_usd": { "type": ["number", "null"] }
+      }
+    },
+    "NewProjectBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "root"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "root": {
+          "type": "string"
+        },
+        "base_branch": {
+          "type": "string"
+        },
+        "context": {
+          "type": "string"
+        },
+        "folders": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Folder"
+          }
+        },
+        "blocked": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "day_budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/NewAgentBody"
+          }
+        }
+      }
+    },
+    "NewTaskBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project_id",
+        "title"
+      ],
+      "properties": {
+        "project_id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "brief": {
+          "type": "string"
+        },
+        "budget_usd": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "agent_id": {
+          "type": "string"
+        }
+      }
+    },
+    "CreatedProject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "project",
+        "agents",
+        "files"
+      ],
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/Project"
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Agent"
+          }
+        },
+        "files": {}
+      }
     }
   }
 }

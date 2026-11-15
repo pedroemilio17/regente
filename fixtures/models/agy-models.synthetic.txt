@@ -1,0 +1,4 @@
+gemini-synth-pro-high	Gemini Synth Pro (High)
+claude-synth-medium	Claude Synth (Medium)
+Fetching available models...
+

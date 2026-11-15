@@ -155,15 +155,19 @@ pub fn merge_block(existing: &str, block: &str) -> String {
 /// Write `.regente/team.yaml` and the context files the team's CLIs read.
 /// Returns the paths written, relative to the project root.
 pub async fn write_team_files(app: &App, project: &Project) -> AppResult<Vec<String>> {
-    let root = PathBuf::from(&project.root);
     let agents = app.store.list_agents(Some(&project.id))?;
+    write_files(project, &agents).await
+}
+
+pub async fn write_files(project: &Project, agents: &[Agent]) -> AppResult<Vec<String>> {
+    let root = PathBuf::from(&project.root);
     let config_dir = root.join(".regente");
     tokio::fs::create_dir_all(&config_dir).await?;
-    tokio::fs::write(config_dir.join("team.yaml"), team_yaml(project, &agents)).await?;
+    tokio::fs::write(config_dir.join("team.yaml"), team_yaml(project, agents)).await?;
     // Worktrees, caches and diffs stay out of git; team.yaml is versioned.
     tokio::fs::write(config_dir.join(".gitignore"), "wt/\ncache/\ndiffs/\n").await?;
     let mut written = vec![".regente/team.yaml".to_string()];
-    let block = context_block(project, &agents);
+    let block = context_block(project, agents);
     let mut files = Vec::new();
     if agents
         .iter()

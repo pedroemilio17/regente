@@ -1,0 +1,9 @@
+{
+  "turns": [
+    [
+      { "do": "mcp", "tool": "report_done", "args": { "summary": "Tela pronta.", "files_changed": ["src/Status.tsx"] } },
+      { "do": "sleep", "ms": 1500 },
+      { "do": "edit", "path": "src/Status.tsx", "summary": "Criou a tela após reportar", "content": "export const status = 'ok';\n" }
+    ]
+  ]
+}

@@ -85,3 +85,65 @@ Um relatório curto por marco: o que foi feito, o que ficou e as decisões tomad
 - `POST /projects` grava `.regente/team.yaml`, `CLAUDE.md` e `AGENTS.md` (preservando o que o usuário já escreveu) e aplica os padrões bloqueados (`creating_a_project_writes_team_files_and_runs_with_its_permissions`).
 
 **Números**: 87 testes do daemon passando; `cargo clippy -- -D warnings` e `cargo fmt --check` limpos.
+
+## M5 — medição preliminar de desempenho
+
+Em 14/11/2026, uma medição de 30,004 s com quatro agentes falsos ativos em todas as 30 amostras usou Chromium headless; diagnóstico posterior no mesmo modo mostrou a aba do Regente visível e com foco, apesar de outra aba ter sido trazida à frente. Portanto, esta não é uma medição válida de segundo plano. A CPU dos processos existentes do Chromium somou cerca de 4,07% de um núcleo: renderer 2,27%, processo do navegador 0,27%, processo GPU 1,40% e rede 0,13%. O processo GPU aqui é CPU, não utilização da GPU. O PID do daemon não foi informado, então sua CPU não foi medida. A captura ficou em `/tmp/perf.png` na máquina de teste.
+
+A meta de menos de 2% em segundo plano **ainda não foi demonstrada**: a medição inclui processos compartilhados pelo navegador e uma aba vazia, usa Chromium headless com a aba visível e não mede o app Tauri nem a utilização da GPU. O procedimento reproduzível está em `ui/e2e/performance.mjs`; a fixture `fixtures/fake/performance.json` mantém os agentes ativos sem chamadas pagas.
+
+Uma segunda medição de 30 s com Chromium em modo gráfico também encontrou a página visível e com foco, com 18 animações em execução; quatro agentes ficaram ativos em todas as amostras. CPU por núcleo: renderer 2,10%, navegador 0,67%, processo GPU 1,73%, rede 0,10% e daemon 0,80%. Ela tampouco comprova desempenho em segundo plano. O teste foi ajustado para abrir a aba adicional no mesmo contexto e usar o tratamento normal do Chromium para abas em segundo plano; é necessário repetir e conferir a visibilidade efetiva.
+
+## M5 a M7 — interface e validação
+
+A interface cobre visão geral, detalhes e timeline dos agentes, aprovações, terminal sob demanda, contas, orçamentos e criação de projetos e agentes. Em 14/11/2026 passaram build e lint da UI, 13 testes Vitest e 3 cenários Playwright com daemon isolado e agentes falsos. Os cenários cobrem delegação, aprovação, reconexão, terminal, criação de projeto e pausa por orçamento. Também passaram 97 testes do daemon (73 unitários, 2 de contrato e 22 de integração), formatação e Clippy do daemon; a formatação do app desktop foi verificada. A medição nativa posterior de CPU está registrada abaixo; a utilização de GPU ainda não foi medida.
+
+Projetos exigem raiz de repositório Git e branch existente. O adaptador falso aplica as regras de acesso às pastas; para CLIs reais, projetos com pastas somente leitura ou sem acesso têm a execução recusada antes de criar worktree, pois as regras dos CLIs não garantem isolamento de subpastas. O rollback da criação de projeto cobre falhas normais, sem garantir recuperação de queda do processo ou concorrência externa.
+
+## M8 — preparação para aceite real
+
+O script `scripts/prepare-m8.py` foi executado com sucesso em 14/11/2026: criou um repositório temporário, daemon isolado e configuração dos quatro agentes, sem iniciar tarefas ou CLIs pagos. A execução real e os pacotes Linux foram posteriormente verificados conforme registrado abaixo. O aceite completo e a validação de pacotes macOS permanecem pendentes.
+
+Uma nova tentativa de 5 s, com duas abas no mesmo contexto e tratamento padrão de fundo do Chromium, ainda indicou a página visível, com foco e 18 animações em execução. O ambiente automatizado não conseguiu ocultar a aba; essa tentativa não mede o Tauri em segundo plano.
+
+### Primeira tentativa real autorizada — Codex e agy
+
+Na tentativa de 14/11/2026, sem Claude por falta de créditos, os quatro cards apareceram sem erros JavaScript. Backend e Frontend trabalharam em worktrees paralelos e trocaram mensagens sobre o contrato; o backend passou três testes e a rota `GET /health` respondeu no repositório. Os custos estimados dos três trabalhadores com uso registrado somaram US$ 0,287873; o orquestrador foi cancelado sem relatório de uso, portanto esse valor não é o custo total da tentativa.
+
+A rodada revelou uma corrida: o Frontend chamou `report_done` às 23:10:13.980, o QA iniciou às 23:10:14.777 e o checkpoint e status concluído do Frontend só ocorreram às 23:10:38.839. O QA recebeu o trabalho do Backend, mas não os arquivos do Frontend presentes em sua branch. Os quatro agentes foram pausados e o merge não foi aprovado. A barreira entre conclusão, checkpoint e início de dependentes foi corrigida e testada; o aceite M8 permanece pendente. Evidências temporárias: `/tmp/regente-m8-_qmxegu1`.
+
+### Segunda tentativa real — Codex e agy
+
+Após a correção da barreira, a segunda rodada usou Codex no orquestrador, Backend e QA, e agy no Frontend, sem Claude. Os quatro cards apareceram sem erros JavaScript; foram observados 71 eventos, três mensagens e nenhuma ocorrência do valor de segredo falso auditado. O QA verificou cinco arquivos e passou seis casos em dois arquivos de teste. A rota respondeu por HTTP e a tela integrada foi verificada no navegador. O uso registrado foi estimado em US$ 0,303781625. O merge ficou aguardando aprovação (`ap_9ecff179c37d4f4e`); o cenário completo com Claude e o aceite final permanecem pendentes. Evidências temporárias: `/tmp/regente-m8-7l10tq79`.
+
+### Desktop Linux e medição nativa
+
+Os pacotes DEB (6,84 MiB) e RPM (6,85 MiB) foram gerados com um sysroot temporário, sem instalar bibliotecas no sistema. Ambos incluem os três binários, interface e fixtures; as dependências dinâmicas foram resolvidas. No smoke do RPM extraído, o app iniciou seu próprio daemon, serviu a interface, fechou normalmente por `WM_DELETE_WINDOW` com código 0 e deixou o daemon saudável. Artefatos em `app/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/`. A instalação completa e pacotes macOS não foram validados.
+
+Em uma medição nativa de 30 s, após aquecimento, a janela Tauri permaneceu minimizada e quatro agentes falsos ativos em todas as 30 amostras. Os mesmos processos do app e WebKit estavam presentes no início e no fim: CPU do app/WebKit 0,667% de um núcleo, daemon 0,267%, total 0,933%. Isso atende à meta de CPU nesta configuração; a utilização de GPU não foi medida. O procedimento está em `scripts/native-performance.py`.
+
+Na repetição final de 30,000 s, com 5 s de aquecimento, a janela permaneceu minimizada e quatro agentes ativos em todas as 30 amostras; os mesmos processos Tauri, WebKit de conteúdo e WebKit de rede permaneceram presentes. O app/WebKit usou 0,667% de um núcleo e o daemon 0,233%, totalizando 0,900%: a meta de CPU abaixo de 2% foi demonstrada nesta configuração Linux. O contador Intel RC6 indicou 96,253% do intervalo em residência ociosa **global da GPU**; outras aplicações podem afetá-lo. Seu complemento não mede utilização, e a utilização de GPU atribuível ao Regente não foi medida.
+
+### Continuação M8 — Botão de login por plataforma (R2) e alinhamento de ambiente
+
+Em 15/11/2026, foram implementados os requisitos complementares do marco M8 para atender à definição de pronto do MVP:
+1. **Login por plataforma na interface (R2)**:
+   - Implementado no componente `AccountCard` (`ui/src/screens/Profiles.tsx`) e módulo de autenticação (`ui/src/lib/auth.ts`) o botão de login interativo para Claude, ChatGPT (Codex) e Antigravity (agy).
+   - O fluxo direciona para o login de cada plataforma (`https://claude.ai/login`, `https://chatgpt.com/`, `https://antigravity.google/` para assinaturas, ou páginas de chave de API correspondentes: Console Anthropic, OpenAI Platform, Google AI Studio) com `target="_blank"` e `rel="noopener noreferrer"`.
+   - São exibidas as orientações e comandos CLI para cada plataforma (`claude auth login --claudeai`, `codex login`, `agy`) e os nomes de variáveis de ambiente (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`).
+   - Cobertura de testes unitários adicionada em `ui/src/screens/Profiles.test.tsx` (7 testes cobrindo renderização, atributos de links e reatividade ao alterar tipo de login).
+2. **Formatação Rust e compatibilidade de filtros de build**:
+   - Ajustada formatação de `daemon/src/adapters/process.rs` e `daemon/src/security/folder_sandbox.rs` via `cargo fmt`; validação com `cargo fmt --check` passando com 0 diffs.
+   - Nome do pacote na pasta `ui` alinhado para `"name": "ui"`, permitindo resolução idêntica de comandos `pnpm --filter ui test` e `pnpm --filter ui lint`.
+3. **Validação da suíte canônica de testes**:
+   - `cargo test -p daemon`: 98 testes passaram (74 unitários, 2 de contrato, 22 de integração, 1 ignorado que exige bwrap sem privilégios).
+   - `cargo clippy -- -D warnings`: 0 erros ou avisos.
+   - `cargo fmt --check`: 0 diffs.
+   - `pnpm --filter ui test`: 21 testes passaram em 5 arquivos de teste.
+   - `pnpm --filter ui lint`: 0 erros de tipo e lint.
+   - `pnpm test:contracts`: 5 testes de contrato de esquemas passaram.
+   - `scripts/prepare-m8.py`: executado com sucesso preparando repositório temporário isolado e daemon funcional.
+
+## Regente 2.0 — T10 (polimento e E2E)
+
+Em 15/11/2026, `ui/e2e/team.spec.ts` foi reescrito para a nova interface e cobre os Fluxos A–D com daemon real e agentes falsos: tarefa ao Maestro pelo chat muda o nó, popover → Atividade → Voltar ao chat com rascunho e destinatário intactos, três arestas `delegated` no modo Execução e badge "Reconectando…" com recuperação. Os 5 testes E2E passaram duas vezes seguidas. O QA visual em 1440x900 e 1024x768 levou a estas mudanças: canvas na largura toda logo abaixo das aprovações, agentes sem `parent_id` pendurados no Maestro, `fitView` limitado a zoom 1 com margem para a barra e os botões, filhos em grade quando passam de seis, "Disponível" como rótulo único de ocioso e "Aguardando" enquanto há aprovação de merge pendente. Também entraram anel de foco accent, Enter na aresta abrindo os detalhes e a remoção de CSS morto. O `--muted` já passava em AA (6,3:1 sobre `--raised`). Ficaram pendentes o Fluxo E, o perfil de pan/zoom com 30 agentes (só CPU foi medida) e o traçado das arestas `depends_on` entre irmãos.

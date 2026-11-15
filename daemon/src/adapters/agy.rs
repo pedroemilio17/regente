@@ -240,6 +240,7 @@ pub fn command(ctx: &TurnCtx) -> CommandSpec {
     if !model.is_empty() {
         args.extend(["--model".to_string(), model]);
     }
+    // agy models carry the reasoning level in the slug (D23): no `--effort`.
     let login_key = ctx
         .account
         .as_ref()

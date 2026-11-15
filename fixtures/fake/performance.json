@@ -1,0 +1,886 @@
+{
+  "turns": [
+    [
+      {
+        "do": "think",
+        "text": "Medição de desempenho 1"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 2"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 3"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 4"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 5"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 6"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 7"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 8"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 9"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 10"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 11"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 12"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 13"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 14"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 15"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 16"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 17"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 18"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 19"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 20"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 21"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 22"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 23"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 24"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 25"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 26"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 27"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 28"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 29"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 30"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 31"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 32"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 33"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 34"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 35"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 36"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 37"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 38"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 39"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 40"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 41"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 42"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 43"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 44"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 45"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 46"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 47"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 48"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 49"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 50"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 51"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 52"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 53"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 54"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 55"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 56"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 57"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 58"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 59"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 60"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 61"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 62"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 63"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 64"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 65"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 66"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 67"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 68"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 69"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 70"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 71"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 72"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 73"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 74"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 75"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 76"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 77"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 78"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 79"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 80"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 81"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 82"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 83"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 84"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 85"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 86"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 87"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 88"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 89"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 90"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 91"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 92"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 93"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 94"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 95"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 96"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 97"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 98"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 99"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 100"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 101"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 102"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 103"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 104"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 105"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 106"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 107"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 108"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 109"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      },
+      {
+        "do": "think",
+        "text": "Medição de desempenho 110"
+      },
+      {
+        "do": "sleep",
+        "ms": 500
+      }
+    ]
+  ]
+}

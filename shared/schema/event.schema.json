@@ -21,7 +21,7 @@
     "raw_ref": { "type": "string", "description": "Raw CLI output this event came from, relative to the daemon home." },
     "data": {
       "type": "object",
-      "description": "Extra detail by kind: status, reason, diff, diff_ref, output, approval_id, severity, message fields, budget_warning.",
+      "description": "Extra detail by kind: status, reason, diff, diff_ref, output, approval_id, severity, message fields, budget_warning, text (full text of a thinking or task_done event, up to 64 KB).",
       "additionalProperties": true
     }
   },

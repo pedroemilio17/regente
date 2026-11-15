@@ -1,9 +1,10 @@
 //! Codex adapter (`codex exec --json`).
 
+use chrono::{DateTime, SecondsFormat, Utc};
 use serde_json::{json, Value};
 
 use super::{clip, first_line, CommandSpec, LineParser, Parsed, TurnCtx};
-use crate::model::{truncate, EventKind, NewEvent, Usage};
+use crate::model::{full_text, truncate, EventKind, NewEvent, Usage};
 use crate::security;
 
 pub struct CodexParser {
@@ -81,7 +82,8 @@ impl CodexParser {
                 let message = text("text");
                 if !message.trim().is_empty() {
                     out.push(Parsed::Event(
-                        self.event(EventKind::Thinking, truncate(&message, 200)),
+                        self.event(EventKind::Thinking, truncate(&message, 200))
+                            .with("text", json!(full_text(&message))),
                     ));
                     if item.get("type").and_then(Value::as_str) == Some("agent_message") {
                         self.last_message = message;
@@ -175,6 +177,116 @@ impl CodexParser {
     }
 }
 
+/// Plan utilization from a `token_count` event: `rate_limits.primary/secondary.
+/// {used_percent, window_minutes, resets_at}` under `payload` (confirmed in the
+/// session JSONL, 15/11/2026, codex-cli 0.166.0). Only numbers are read.
+pub(crate) fn rate_limits(value: &Value) -> Vec<Parsed> {
+    let Some(limits) = ["/rate_limits", "/msg/rate_limits", "/payload/rate_limits"]
+        .iter()
+        .find_map(|path| value.pointer(path))
+    else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    for key in ["primary", "secondary"] {
+        let Some(info) = limits.get(key) else {
+            continue;
+        };
+        let Some(used) = info.get("used_percent").and_then(Value::as_f64) else {
+            continue;
+        };
+        let window = match info.get("window_minutes").and_then(Value::as_i64) {
+            Some(300) => "5h",
+            Some(10080) => "week",
+            _ => continue,
+        };
+        let resets_at = info
+            .get("resets_at")
+            .and_then(Value::as_i64)
+            .or_else(|| {
+                info.get("resets_in_seconds")
+                    .and_then(Value::as_i64)
+                    .map(|secs| Utc::now().timestamp() + secs)
+            })
+            .and_then(|secs| DateTime::<Utc>::from_timestamp(secs, 0))
+            .map(|dt| dt.to_rfc3339_opts(SecondsFormat::Millis, true));
+        out.push(Parsed::RateLimit {
+            window,
+            pct: (used / 100.0).clamp(0.0, 1.0),
+            resets_at,
+        });
+    }
+    out
+}
+
+/// Newest `.jsonl` under the sessions dir (`YYYY/MM/DD/…`), descending by name.
+fn newest_session(dir: &std::path::Path) -> Option<std::path::PathBuf> {
+    let mut dirs = Vec::new();
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(dir).ok()?.flatten() {
+        let path = entry.path();
+        if path.is_dir() {
+            dirs.push(path);
+        } else if path.extension().is_some_and(|ext| ext == "jsonl") {
+            let modified = entry.metadata().and_then(|m| m.modified()).ok()?;
+            files.push((modified, path));
+        }
+    }
+    dirs.sort();
+    for sub in dirs.iter().rev() {
+        if let Some(found) = newest_session(sub) {
+            return Some(found);
+        }
+    }
+    files.into_iter().max().map(|(_, path)| path)
+}
+
+/// Codex has no usage command: read the last `token_count` of the most recent
+/// session file. Windows already reset are dropped. No conversation text is kept.
+pub fn latest_rate_limits(codex_home: &std::path::Path) -> Vec<Parsed> {
+    use std::io::{Read, Seek, SeekFrom};
+    let Some(path) = newest_session(&codex_home.join("sessions")) else {
+        return Vec::new();
+    };
+    let Ok(mut file) = std::fs::File::open(path) else {
+        return Vec::new();
+    };
+    let len = file.metadata().map(|m| m.len()).unwrap_or(0);
+    let tail = len.min(2 * 1024 * 1024);
+    let mut bytes = Vec::new();
+    if file.seek(SeekFrom::Start(len - tail)).is_err() || file.read_to_end(&mut bytes).is_err() {
+        return Vec::new();
+    }
+    let text = String::from_utf8_lossy(&bytes);
+    let now = Utc::now();
+    for line in text.lines().rev() {
+        if !line.contains("rate_limits") {
+            continue;
+        }
+        let Ok(value) = serde_json::from_str::<Value>(line) else {
+            continue;
+        };
+        if value.pointer("/payload/type").and_then(Value::as_str) != Some("token_count") {
+            continue;
+        }
+        let limits = rate_limits(&value);
+        if limits.is_empty() {
+            continue;
+        }
+        return limits
+            .into_iter()
+            .filter(|item| match item {
+                Parsed::RateLimit { resets_at, .. } => resets_at
+                    .as_deref()
+                    .and_then(|ts| DateTime::parse_from_rfc3339(ts).ok())
+                    .is_some_and(|at| at > now),
+                _ => false,
+            })
+            .collect();
+    }
+    Vec::new()
+}
+
 impl LineParser for CodexParser {
     fn parse_line(&mut self, line: &str) -> Vec<Parsed> {
         let Ok(value) = serde_json::from_str::<Value>(line) else {
@@ -182,6 +294,7 @@ impl LineParser for CodexParser {
         };
         let kind = value.get("type").and_then(Value::as_str).unwrap_or("");
         match kind {
+            "event_msg" => rate_limits(&value),
             "thread.started" => value
                 .get("thread_id")
                 .and_then(Value::as_str)
@@ -240,6 +353,9 @@ pub fn command(ctx: &TurnCtx) -> CommandSpec {
     if !model.is_empty() {
         args.extend(["-m".to_string(), model]);
     }
+    if let Some(effort) = ctx.effort() {
+        args.extend(["-c".to_string(), format!("model_reasoning_effort={effort}")]);
+    }
     args.push(ctx.prompt.clone());
     let login_key = ctx
         .account
@@ -261,6 +377,24 @@ pub fn command(ctx: &TurnCtx) -> CommandSpec {
 mod tests {
     use super::super::testing::{events, kinds, parse_fixture};
     use super::*;
+
+    #[test]
+    fn session_file_feeds_the_windows() {
+        let dir = tempfile::tempdir().unwrap();
+        let day = dir.path().join("sessions/2026/11/15");
+        std::fs::create_dir_all(&day).unwrap();
+        let fixture =
+            crate::app::testing::fixtures_dir().join("codex/session-rate-limits.synthetic.jsonl");
+        std::fs::copy(fixture, day.join("rollout.jsonl")).unwrap();
+        let limits = latest_rate_limits(dir.path());
+        // The week window of the last event already reset, so only 5h remains.
+        assert_eq!(limits.len(), 1);
+        assert!(matches!(
+            &limits[0],
+            Parsed::RateLimit { window: "5h", pct, resets_at: Some(_) } if (*pct - 0.06).abs() < 1e-9
+        ));
+        assert!(latest_rate_limits(&dir.path().join("none")).is_empty());
+    }
 
     #[test]
     fn fixture_produces_the_expected_sequence() {

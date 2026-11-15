@@ -4,6 +4,8 @@
 //! Central rule: no agent sees a secret, and no text that comes from outside
 //! becomes an instruction.
 
+#[cfg(test)]
+mod folder_sandbox;
 pub mod watcher;
 
 use std::collections::{BTreeSet, HashSet};
@@ -14,6 +16,55 @@ use sha2::{Digest, Sha256};
 
 /// Default patterns denied to every agent of a project.
 pub const DEFAULT_BLOCKED: [&str; 4] = [".env*", "secrets/", "*.pem", "id_*"];
+
+/// Reject absolute paths, traversal and symlink components, including dangling links.
+pub fn safe_relative_path(root: &Path, path: &str) -> bool {
+    use std::path::Component;
+    let relative = Path::new(path);
+    if path.is_empty()
+        || relative
+            .components()
+            .any(|part| !matches!(part, Component::Normal(_) | Component::CurDir))
+    {
+        return false;
+    }
+    let mut current = root.to_path_buf();
+    for part in relative.components() {
+        current.push(part);
+        match std::fs::symlink_metadata(&current) {
+            Ok(metadata) if metadata.file_type().is_symlink() => return false,
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => return false,
+            _ => {}
+        }
+    }
+    true
+}
+
+/// Restricted directories apply to all descendants, regardless of overlapping rules.
+pub fn folder_denied(folders: &Value, path: &str, write: bool) -> bool {
+    let path = Path::new(path);
+    folders.as_array().into_iter().flatten().any(|folder| {
+        let Some(base) = folder.get("path").and_then(Value::as_str) else {
+            return true;
+        };
+        let Some(access) = folder.get("access").and_then(Value::as_str) else {
+            return true;
+        };
+        let matches = base == "." || path.starts_with(Path::new(base));
+        matches
+            && (access == "none"
+                || (write && access == "read")
+                || !["none", "read", "write"].contains(&access))
+    })
+}
+
+pub fn has_restricted_folders(folders: &Value) -> bool {
+    folders
+        .as_array()
+        .into_iter()
+        .flatten()
+        .any(|folder| !matches!(folder.get("access").and_then(Value::as_str), Some("write")))
+}
 
 /// Values shorter than this are not treated as secrets (`true`, `3000`…).
 const MIN_SECRET_LEN: usize = 8;
@@ -426,6 +477,23 @@ pub fn agy_settings(extra_allow: &[String]) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn folder_rules_restrict_descendants_and_reject_traversal() {
+        let root = tempfile::tempdir().unwrap();
+        let folders =
+            json!([{ "path": "docs", "access": "read" }, { "path": "private", "access": "none" }]);
+        assert!(!folder_denied(&folders, "docs/a.md", false));
+        assert!(folder_denied(&folders, "docs/a.md", true));
+        assert!(folder_denied(&folders, "private/a", false));
+        assert!(!folder_denied(&folders, "docs-other/a", true));
+        assert!(!safe_relative_path(root.path(), "../outside"));
+        #[cfg(unix)]
+        {
+            std::os::unix::fs::symlink("/tmp", root.path().join("link")).unwrap();
+            assert!(!safe_relative_path(root.path(), "link/file"));
+        }
+    }
 
     // Fake values only: nothing here is a real credential.
     const FAKE_ENV: &str = "# comment\nDATABASE_URL=\"postgres://fake:fake@localhost/db\"\nexport API_TOKEN='tok_fake_0123456789'\nPORT=3000\nDEBUG=true\n";

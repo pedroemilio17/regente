@@ -405,6 +405,30 @@ impl Store {
 
     // ---- projects -------------------------------------------------------
 
+    pub fn insert_project_team(&self, project: &Project, agents: &[Agent]) -> StoreResult<()> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        tx.execute(
+            &format!("INSERT INTO projects ({PROJECT_COLS}) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"),
+            params![
+                project.id,
+                project.name,
+                project.root,
+                project.base_branch,
+                project.context,
+                project.folders.to_string(),
+                project.blocked.to_string(),
+                project.day_budget_usd,
+                project.created_at
+            ],
+        )?;
+        for agent in agents {
+            tx.execute(&format!("INSERT INTO agents ({AGENT_COLS}) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16)"), params![agent.id, agent.project_id, agent.name, agent.cli, agent.role, agent.is_orchestrator as i64, agent.parent_id, agent.account_id, agent.model, agent.pet.to_string(), agent.permissions.to_string(), agent.settings.to_string(), agent.budget_usd, agent.paused as i64, agent.pause_reason, agent.created_at])?;
+        }
+        tx.commit()?;
+        Ok(())
+    }
+
     pub fn insert_project(&self, project: &Project) -> StoreResult<()> {
         self.conn().execute(
             &format!("INSERT INTO projects ({PROJECT_COLS}) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9)"),
@@ -441,6 +465,23 @@ impl Store {
             )
             .optional()?
             .ok_or_else(|| StoreError::NotFound(format!("project {id}")))
+    }
+
+    pub fn update_project(&self, project: &Project) -> StoreResult<()> {
+        self.conn().execute(
+            "UPDATE projects SET base_branch=?2, context=?3, folders=?4, blocked=?5, day_budget_usd=?6, name=?7, root=?8 WHERE id=?1",
+            params![
+                project.id,
+                project.base_branch,
+                project.context,
+                project.folders.to_string(),
+                project.blocked.to_string(),
+                project.day_budget_usd,
+                project.name,
+                project.root
+            ],
+        )?;
+        Ok(())
     }
 
     // ---- accounts -------------------------------------------------------
@@ -659,6 +700,12 @@ impl Store {
             "UPDATE tasks SET summary=?2 WHERE id=?1",
             params![id, summary],
         )?;
+        Ok(())
+    }
+
+    pub fn clear_task_summary(&self, id: &str) -> StoreResult<()> {
+        self.conn()
+            .execute("UPDATE tasks SET summary=NULL WHERE id=?1", params![id])?;
         Ok(())
     }
 
@@ -941,6 +988,20 @@ impl Store {
 mod tests {
     use super::*;
     use crate::model::{new_id, Usage};
+
+    #[test]
+    fn project_team_insert_rolls_back_when_an_agent_insert_fails() {
+        let seed = Store::open_memory().unwrap();
+        let project = project(&seed);
+        let mut member = agent(&seed, "ag_1");
+        member.account_id = None;
+        let store = Store::open_memory().unwrap();
+        assert!(store
+            .insert_project_team(&project, &[member.clone(), member])
+            .is_err());
+        assert!(store.list_projects().unwrap().is_empty());
+        assert!(store.list_agents(None).unwrap().is_empty());
+    }
 
     fn project(store: &Store) -> Project {
         let project = Project {

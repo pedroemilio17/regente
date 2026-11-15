@@ -13,7 +13,7 @@ use tokio::sync::watch;
 
 use super::{attach_diff, handle_parsed, parser_for, TurnCtx, TurnOutcome};
 use crate::app::{App, AppError, AppResult};
-use crate::model::{truncate, EventKind, NewEvent, Usage};
+use crate::model::{full_text, truncate, EventKind, NewEvent, Usage};
 use crate::security::{self, watcher};
 
 /// Steps of the turn `turn_index` of a scenario file.
@@ -139,7 +139,11 @@ async fn run_step(
     let number = |key: &str| step.get(key).and_then(Value::as_i64);
     match step.get("do").and_then(Value::as_str).unwrap_or("") {
         "think" => {
-            app.emit(NewEvent::new(agent, EventKind::Thinking, text("text")).task(task))?;
+            app.emit(
+                NewEvent::new(agent, EventKind::Thinking, text("text"))
+                    .with("text", json!(full_text(&text("text"))))
+                    .task(task),
+            )?;
         }
         "sleep" => {
             if pause_or_cancel(cancel, number("ms").unwrap_or(10).max(0) as u64).await {
@@ -148,7 +152,10 @@ async fn run_step(
         }
         "read" => {
             let path = text("path");
-            if security::is_blocked(&path, &ctx.blocked()) {
+            if security::is_blocked(&path, &ctx.blocked())
+                || !security::safe_relative_path(&ctx.cwd, &path)
+                || security::folder_denied(&ctx.project.folders, &path, false)
+            {
                 app.emit(
                     NewEvent::new(
                         agent,
@@ -170,7 +177,24 @@ async fn run_step(
         "edit" => edit(app, ctx, step, outcome).await?,
         "shell_write" => {
             // A file changed by a shell command: no edit event, like `printf > file` in a real CLI.
-            let full = ctx.cwd.join(text("path"));
+            let path = text("path");
+            if !security::safe_relative_path(&ctx.cwd, &path)
+                || security::is_blocked(&path, &ctx.blocked())
+                || security::folder_denied(&ctx.project.folders, &path, true)
+            {
+                app.emit(
+                    NewEvent::new(
+                        agent,
+                        EventKind::SecurityAlert,
+                        format!("Escrita bloqueada: {path}"),
+                    )
+                    .task(task)
+                    .target(path)
+                    .data(json!({ "severity": "warning", "blocked": true })),
+                )?;
+                return Ok(());
+            }
+            let full = ctx.cwd.join(path);
             if let Some(dir) = full.parent() {
                 tokio::fs::create_dir_all(dir).await?;
             }
@@ -296,8 +320,8 @@ async fn edit(
         .unwrap_or("")
         .to_string();
     if security::is_blocked(&path, &ctx.blocked())
-        || path.starts_with('/')
-        || path.split('/').any(|part| part == "..")
+        || !security::safe_relative_path(&ctx.cwd, &path)
+        || security::folder_denied(&ctx.project.folders, &path, true)
     {
         app.emit(
             NewEvent::new(

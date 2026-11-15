@@ -769,6 +769,40 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn long_text_travels_whole_in_data_and_is_redacted() {
+        let dir = tempfile::tempdir().unwrap();
+        std::fs::write(dir.path().join(".env"), "API_TOKEN=tok_fake_0123456789\n").unwrap();
+        let app = app(dir.path());
+        let project = project(&app, dir.path());
+        let agent = agent(&app, &project, "Backend", "basic", false);
+        crate::security::watcher::refresh_secrets(&app, &project.id, dir.path());
+        let long = "palavra ".repeat(100);
+        let event = app
+            .emit(
+                NewEvent::new(
+                    &agent.id,
+                    EventKind::Thinking,
+                    crate::model::truncate(&long, 200),
+                )
+                .with("text", json!(crate::model::full_text(&long))),
+            )
+            .unwrap();
+        assert!(event.summary.chars().count() <= 200);
+        assert_eq!(event.data.unwrap()["text"].as_str().unwrap(), long.trim());
+        assert_eq!(
+            crate::model::full_text(&"a".repeat(70_000)).chars().count(),
+            64 * 1024 + 1
+        );
+        let leaked = app
+            .emit(
+                NewEvent::new(&agent.id, EventKind::Thinking, "curto")
+                    .with("text", json!("o token é tok_fake_0123456789")),
+            )
+            .unwrap();
+        assert_eq!(leaked.data.unwrap(), json!({ "redacted": true }));
+    }
+
+    #[tokio::test]
     async fn events_never_carry_secret_values() {
         let dir = tempfile::tempdir().unwrap();
         // Fake value only.
