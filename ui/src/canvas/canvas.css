@@ -1,0 +1,311 @@
+/* Agent canvas. Tokens come from :root in styles.css; fallbacks keep it readable alone. */
+
+.cv-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 360px;
+  border: 1px solid var(--border, #333840);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--canvas, #16191c);
+  overflow: hidden;
+}
+
+.cv-wrap .react-flow {
+  --xy-background-color: var(--canvas, #16191c);
+  --xy-background-pattern-color: var(--border, #333840);
+  --xy-edge-stroke: var(--muted, #a2aab3);
+  --xy-node-background-color: transparent;
+  --xy-node-border: none;
+  --xy-node-boxshadow-hover: none;
+  --xy-node-boxshadow-selected: none;
+  --xy-edge-label-background-color: var(--panel, #1b1e22);
+  --xy-edge-label-color: var(--text, #eff0f2);
+}
+
+.cv-toolbar,
+.cv-controls {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  gap: var(--space-2, 8px);
+}
+.cv-toolbar {
+  top: var(--space-3, 12px);
+  left: var(--space-3, 12px);
+}
+.cv-controls {
+  bottom: var(--space-3, 12px);
+  left: var(--space-3, 12px);
+}
+.cv-modes {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--radius-md, 8px);
+  background: var(--panel, #1b1e22);
+  border: 1px solid var(--border, #333840);
+}
+/* Pressed is a tint, so the accent outline stays unique to keyboard focus. */
+.cv-modes .btn[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--accent, #9e8ae8) 24%, var(--raised, #24282d));
+  color: var(--text, #eff0f2);
+  border-color: transparent;
+}
+.cv-run {
+  max-width: 220px;
+}
+.cv-empty {
+  position: absolute;
+  inset: 64px var(--space-4, 16px) auto;
+}
+
+/* Nodes */
+.cv-node {
+  width: 256px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--panel, #1b1e22);
+  border: 1px solid var(--border, #333840);
+  color: var(--text, #eff0f2);
+  font-size: 12px;
+  transition: opacity 120ms;
+}
+.cv-orchestrator {
+  border-color: var(--accent, #9e8ae8);
+}
+.react-flow__node.selected .cv-node,
+.react-flow__node:focus-visible .cv-node {
+  outline: 2px solid var(--accent, #9e8ae8);
+  outline-offset: 2px;
+}
+.react-flow__node:focus-visible {
+  outline: none;
+}
+.cv-node.is-dim {
+  opacity: 0.45;
+}
+.cv-node-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.cv-pet {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border-radius: var(--radius-md, 8px);
+  background: var(--raised, #24282d);
+}
+.cv-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cv-who b {
+  font-size: 14px;
+}
+.cv-who b,
+.cv-who small,
+.cv-task,
+.cv-last-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cv-who small,
+.cv-last {
+  color: var(--muted, #a2aab3);
+}
+.cv-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.cv-shape {
+  width: 14px;
+  text-align: center;
+}
+.cv-st-working .cv-status { color: var(--success, #63b999); }
+.cv-st-waiting .cv-status { color: var(--warning, #dfb269); }
+.cv-st-paused .cv-status { color: var(--info, #7cabe3); }
+.cv-st-error .cv-status { color: var(--danger, #dc7779); }
+.cv-st-idle .cv-status,
+.cv-st-offline .cv-status,
+.cv-st-unknown .cv-status { color: var(--muted, #a2aab3); }
+.cv-last {
+  display: flex;
+  gap: 6px;
+  justify-content: space-between;
+}
+.cv-ago {
+  flex: none;
+}
+.cv-node .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Edges: kind is told by stroke style and label, not color alone. */
+.cv-edge .react-flow__edge-path {
+  stroke-width: 1.5;
+}
+.cv-edge-allowed .react-flow__edge-path {
+  stroke: color-mix(in srgb, var(--muted, #a2aab3) 45%, var(--border, #333840));
+  stroke-width: 2;
+}
+.cv-edge-delegated .react-flow__edge-path {
+  stroke: var(--accent, #9e8ae8);
+  stroke-width: 2;
+}
+.cv-edge-depends_on .react-flow__edge-path {
+  stroke: var(--muted, #a2aab3);
+  stroke-dasharray: 6 4;
+}
+.cv-edge-blocked_by .react-flow__edge-path {
+  stroke: var(--warning, #dfb269);
+  stroke-dasharray: 2 4;
+  stroke-width: 2;
+}
+.cv-edge-failed .react-flow__edge-path {
+  stroke: var(--danger, #dc7779);
+  stroke-width: 2.5;
+}
+.cv-edge.is-hl .react-flow__edge-path,
+.cv-edge.is-selected .react-flow__edge-path {
+  stroke-width: 3.5;
+}
+.cv-edge.is-new .react-flow__edge-path {
+  animation: cv-edge-new 700ms ease-out;
+}
+@keyframes cv-edge-new {
+  from {
+    stroke-width: 6;
+    filter: drop-shadow(0 0 4px var(--accent, #9e8ae8));
+  }
+}
+.anim-paused .cv-edge.is-new .react-flow__edge-path,
+[data-offscreen] .cv-edge.is-new .react-flow__edge-path {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cv-edge.is-new .react-flow__edge-path {
+    animation: none;
+  }
+  .cv-node {
+    transition: none;
+  }
+}
+
+/* Edge details */
+.cv-popover {
+  position: absolute;
+  z-index: 6;
+  top: var(--space-3, 12px);
+  right: var(--space-3, 12px);
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-lg, 12px);
+  background: var(--raised, #24282d);
+  border: 1px solid var(--border, #333840);
+  color: var(--text, #eff0f2);
+  font-size: 12px;
+}
+.cv-popover dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin: 0;
+}
+.cv-popover dt {
+  color: var(--muted, #a2aab3);
+}
+.cv-popover dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.cv-popover .btn {
+  align-self: flex-end;
+}
+
+/* List view (accessible alternative to the graph) */
+.cv-list {
+  height: 100%;
+  margin: 0;
+  padding: 64px var(--space-3, 12px) var(--space-3, 12px);
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cv-li {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border, #333840);
+  background: var(--panel, #1b1e22);
+  color: var(--text, #eff0f2);
+  font-size: 12px;
+  cursor: default;
+}
+.cv-li[aria-selected='true'] {
+  border-color: var(--accent, #9e8ae8);
+}
+.cv-li:focus-visible {
+  outline: 2px solid var(--accent, #9e8ae8);
+  outline-offset: 2px;
+}
+.cv-li-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+.cv-li-head b {
+  font-size: 14px;
+}
+.cv-li-head .cv-status {
+  margin-left: auto;
+}
+
+/* Overview: top area, then the canvas at full width with most of the window
+   height, then conversation and spend. The center scrolls as a whole. */
+.ov-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  flex: none;
+}
+.ov-top {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+.ov-page > .columns {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-4, 16px);
+}
+.ov-page .col-main {
+  flex: none;
+  height: clamp(400px, calc(100vh - 240px), 1100px);
+}
+.ov-page .col-side {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  align-items: start;
+}
