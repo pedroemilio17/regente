@@ -1,0 +1,14 @@
+{
+  "name": "regente",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter ui dev",
+    "build": "pnpm --filter ui build",
+    "lint": "pnpm --filter ui lint",
+    "test": "pnpm --filter ui test",
+    "e2e": "pnpm --filter ui e2e",
+    "generate:types": "node scripts/generate-contracts.mjs",
+    "check:types": "node scripts/generate-contracts.mjs --check",
+    "test:contracts": "node --test scripts/generate-contracts.test.mjs"
+  }
+}

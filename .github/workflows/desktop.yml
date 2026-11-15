@@ -1,0 +1,53 @@
+name: Desktop packages
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'daemon/**'
+      - 'ui/**'
+      - 'fixtures/**'
+      - 'shared/schema/**'
+      - 'scripts/generate-contracts*'
+      - 'package.json'
+      - 'scripts/build-desktop.sh'
+      - 'Cargo.*'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/desktop.yml'
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            bundles: deb
+          - os: macos-14
+            bundles: app
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check:types && pnpm test:contracts
+      - run: ./scripts/build-desktop.sh --bundles ${{ matrix.bundles }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: regente-${{ matrix.os }}
+          path: app/src-tauri/target/*/release/bundle/
+          if-no-files-found: error
+          retention-days: 7
