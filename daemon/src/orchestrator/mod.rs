@@ -144,6 +144,18 @@ fn reply_task(app: &App, recipient_id: &str, sender_name: &str, origin: &Task) -
         .parent_task_id
         .clone()
         .unwrap_or_else(|| origin.id.clone());
+    let depends_on: Vec<String> = app
+        .store
+        .list_tasks(Some(&origin.project_id))?
+        .into_iter()
+        .filter(|task| {
+            task.root_task_id == origin.root_task_id
+                && task.owner_agent_id == recipient_id
+                && task.status == "done"
+                && task.done_criteria != REPLY_CRITERIA
+        })
+        .map(|task| task.id)
+        .collect();
     let task = Task {
         id: new_id("tk"),
         project_id: origin.project_id.clone(),
@@ -156,7 +168,7 @@ fn reply_task(app: &App, recipient_id: &str, sender_name: &str, origin: &Task) -
         status: "queued".into(),
         branch: None,
         budget_usd: None,
-        depends_on: Vec::new(),
+        depends_on,
         summary: None,
         message_count: 0,
         stalled_rounds: 0,

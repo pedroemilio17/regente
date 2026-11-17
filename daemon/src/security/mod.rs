@@ -453,6 +453,10 @@ pub fn agy_settings(extra_allow: &[String]) -> Value {
         "read_inbox",
         "list_agents",
         "report_done",
+        "get_project",
+        "update_project",
+        "create_agent",
+        "update_agent",
     ]
     .iter()
     .map(|tool| format!("mcp(regente/{tool})"))
@@ -463,12 +467,22 @@ pub fn agy_settings(extra_allow: &[String]) -> Value {
         "git status",
         "git diff",
         "git log",
+        "node",
         "pnpm test",
         "npm test",
         "cargo test",
         "regente run",
     ] {
         allow.push(format!("command({command})"));
+    }
+    if let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) {
+        let mcp_dir = home.join(".gemini/antigravity-cli/mcp/regente");
+        allow.push(format!("read_file({}/**)", mcp_dir.display()));
+        if let Ok(canon) = std::fs::canonicalize(&mcp_dir) {
+            if canon != mcp_dir {
+                allow.push(format!("read_file({}/**)", canon.display()));
+            }
+        }
     }
     allow.extend(extra_allow.iter().cloned());
     json!({ "permissions": { "allow": allow } })
