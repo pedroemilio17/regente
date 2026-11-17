@@ -236,6 +236,13 @@ pub fn command(ctx: &TurnCtx) -> CommandSpec {
     if let Some(conversation) = &ctx.resume {
         args.extend(["--conversation".to_string(), conversation.clone()]);
     }
+    if let Some(home) = std::env::var_os("HOME").map(std::path::PathBuf::from) {
+        let mcp_dir = home.join(".gemini/antigravity-cli/mcp/regente");
+        if mcp_dir.is_dir() {
+            let dir = std::fs::canonicalize(&mcp_dir).unwrap_or(mcp_dir);
+            args.extend(["--add-dir".to_string(), dir.to_string_lossy().into_owned()]);
+        }
+    }
     let model = ctx.model();
     if !model.is_empty() {
         args.extend(["--model".to_string(), model]);
